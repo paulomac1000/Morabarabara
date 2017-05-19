@@ -14,10 +14,10 @@ namespace Morabara.Views
         private readonly RectangleShape settingsButton;
         private readonly RectangleShape exitButton;
 
-        Text newGameText;
-        Text topText;
-        Text settingsText;
-        Text exitText;
+        private readonly Text newGameText;
+        private readonly Text topText;
+        private readonly Text settingsText;
+        private readonly Text exitText;
 
         public Menu()
         {
@@ -55,7 +55,7 @@ namespace Morabara.Views
                 Position = new Vector2f(50, 325)
             };
 
-            settingsText = new Text("Settings", Font)
+            settingsText = new Text("SETTINGS", Font)
             {
                 CharacterSize = 60,
                 Style = Text.Styles.Regular,

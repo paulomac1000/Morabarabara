@@ -8,10 +8,12 @@ using System.Windows.Forms;
 
 namespace Morabara.Logic
 {
-    public static class Top
+    public static class TopLogic
     {
         public static List<TopPlayer> ReadTop()
         {
+            List<TopPlayer> tops = new List<TopPlayer>();
+
             string json = string.Empty;
             try
             {
@@ -31,10 +33,9 @@ namespace Morabara.Logic
                     MessageBox.Show($"Unable create file Data/Data/top.dat: {ex.Message}.");
                 }
 
-                return new List<TopPlayer>();
+                return tops;
             }
 
-            List<TopPlayer> tops;
             try
             {
                 tops = JsonConvert.DeserializeObject<List<TopPlayer>>(json);
@@ -42,9 +43,7 @@ namespace Morabara.Logic
             catch (Exception ex)
             {
                 MessageBox.Show($"Unable deserialize Data/Data/top.dat: {ex.Message}.");
-                return new List<TopPlayer>();
             }
-
             return tops;
         }
 

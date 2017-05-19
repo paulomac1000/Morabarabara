@@ -3,6 +3,7 @@ using SFML;
 using SFML.Graphics;
 using SFML.Window;
 using System;
+using System.Windows.Forms;
 
 namespace Morabara.Views.Base
 {
@@ -17,6 +18,7 @@ namespace Morabara.Views.Base
         {
             Window = new RenderWindow(new VideoMode(800, 600), "Morabara game", Styles.Titlebar);
             WindowsStack.AddNewWindow(Window);
+
             Window.SetFramerateLimit(60);
             Window.Closed += (sender, e) =>
             {
@@ -35,6 +37,7 @@ namespace Morabara.Views.Base
             Font = new Font("Data/Font/zorque.ttf");
             if (Font.CPointer == IntPtr.Zero)
             {
+                MessageBox.Show("Could't load Data/Font/zorque.ttf");
                 throw new LoadingFailedException("font");
             }
         }
