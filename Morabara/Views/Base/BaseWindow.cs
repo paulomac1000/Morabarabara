@@ -27,7 +27,7 @@ namespace Morabara.Views.Base
 
             Window.KeyPressed += (sender, e) =>
             {
-                var window = (Window) sender;
+                var window = (Window)sender;
                 if (e.Code == Keyboard.Key.Escape)
                     WindowsStack.CloseLastWindow();
             };
@@ -44,7 +44,7 @@ namespace Morabara.Views.Base
 
         protected void Dispose()
         {
-            if(!isDisposed)
+            if (!isDisposed)
             {
                 Window.Close();
             }

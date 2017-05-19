@@ -15,11 +15,11 @@ namespace Morabara.Logic
 
         public static void AddNewWindow(RenderWindow window)
         {
-            if(Stack.Count > 0)
+            if (Stack.Count > 0)
             {
                 Stack.Last().SetVisible(false);
             }
-            
+
             Stack.Push(window);
         }
 

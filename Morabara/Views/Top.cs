@@ -1,18 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Morabara.Logic;
 using Morabara.Views.Base;
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
-using System.Windows.Forms;
-using Morabara.Logic;
+using System.Linq;
 
 namespace Morabara.Views
 {
-    public class Top: BaseWindow
+    public class Top : BaseWindow
     {
         private readonly RectangleShape backButton;
         private readonly Text backText;
@@ -36,7 +31,7 @@ namespace Morabara.Views
 
             string topTextString = string.Empty;
             var topPlayers = TopLogic.ReadTop();
-            if(topPlayers != null && !topPlayers.Any())
+            if (topPlayers != null && !topPlayers.Any())
             {
                 var topScores = TopLogic.ReadTop().Select(t => $"{t.Name} - {t.Points}");
                 topTextString = string.Join("\n", topScores);

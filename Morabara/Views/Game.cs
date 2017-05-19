@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Morabara.Views.Base;
+﻿using Morabara.Views.Base;
 
 namespace Morabara.Views
 {
-    public class Game: BaseWindow
+    public class Game : BaseWindow
     {
     }
 }
