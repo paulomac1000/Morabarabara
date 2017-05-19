@@ -68,6 +68,10 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="sfmlnet-audio-2, Version=2.2.0.0, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>lib\sfmlnet-audio-2.dll</HintPath>
@@ -98,6 +102,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Logic\Start.cs" />
+    <Compile Include="Logic\Top.cs" />
+    <Compile Include="Logic\WindowsStack.cs" />
+    <Compile Include="Models\TopPlayer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Views\Base\BaseFunctionalities.cs" />
     <Compile Include="Views\Base\BaseWindow.cs" />
@@ -117,6 +124,7 @@
     <None Include="Data\Font\zorque.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -172,9 +180,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Data\Data\" />
     <Folder Include="Data\Sounds\" />
     <Folder Include="Data\Textures\" />
-    <Folder Include="Models\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

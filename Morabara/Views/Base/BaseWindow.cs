@@ -1,4 +1,5 @@
-﻿using SFML;
+﻿using Morabara.Logic;
+using SFML;
 using SFML.Graphics;
 using SFML.Window;
 using System;
@@ -10,18 +11,23 @@ namespace Morabara.Views.Base
         protected readonly RenderWindow Window;
         protected readonly Event Event;
         protected readonly Font Font;
+        protected bool isDisposed;
 
         public BaseWindow()
         {
             Window = new RenderWindow(new VideoMode(800, 600), "Morabara game", Styles.Titlebar);
+            WindowsStack.AddNewWindow(Window);
             Window.SetFramerateLimit(60);
-            Window.Closed += OnClose;
+            Window.Closed += (sender, e) =>
+            {
+                WindowsStack.CloseLastWindow();
+            };
 
             Window.KeyPressed += (sender, e) =>
             {
                 var window = (Window) sender;
                 if (e.Code == Keyboard.Key.Escape)
-                    window.Close();
+                    WindowsStack.CloseLastWindow();
             };
 
             Event = new Event();
@@ -33,11 +39,12 @@ namespace Morabara.Views.Base
             }
         }
 
-        protected static void OnClose(object sender, EventArgs e)
+        protected void Dispose()
         {
-            // Close the window when OnClose event is received
-            var window = (RenderWindow)sender;
-            window.Close();
+            if(!isDisposed)
+            {
+                Window.Close();
+            }
         }
     }
 }

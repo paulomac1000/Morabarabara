@@ -6,7 +6,7 @@ namespace Morabara.Logic
     {
         private static void Main()
         {
-            var menu = new Menu();
+            new Menu();
         }
     }
 }

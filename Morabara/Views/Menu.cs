@@ -1,7 +1,9 @@
-﻿using Morabara.Views.Base;
+﻿using Morabara.Logic;
+using Morabara.Views.Base;
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
+using System.Windows.Forms;
 
 namespace Morabara.Views
 {
@@ -122,9 +124,21 @@ namespace Morabara.Views
 
             Window.MouseButtonReleased += (sender, args) =>
             {
-                if (exitButton.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y))
+                if (newGameButton.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y))
                 {
-                    Window.Close();
+                    MessageBox.Show("Not implemented yet");
+                }
+                else if (topButton.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y))
+                {
+                    new Top();
+                }
+                else if (settingsButton.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y))
+                {
+                    MessageBox.Show("Not implemented yet");
+                }
+                else if (exitButton.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y))
+                {
+                    WindowsStack.CloseLastWindow();
                 }
             };
         }
