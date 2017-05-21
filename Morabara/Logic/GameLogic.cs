@@ -44,10 +44,25 @@ namespace Morabara.Logic
                 }
 
                 //check if player can can make trap (trap is two possible three)
-                //try to make trap
-                //else - random
+                idFieldToPlaceBall = GetIdOfPlayerTrapOrNull();
+                if (idFieldToPlaceBall != null)
+                {
+                    AssignBallTo(Convert.ToInt32(idFieldToPlaceBall), TakenBy.Computer);
+                    SwitchMoveOrder();
+                    return;
+                }
 
-                idFieldToPlaceBall = GetRandomFreeFIeld();
+                //try to make trap
+                idFieldToPlaceBall = GetIdOfFieldToMakeTrap();
+                if (idFieldToPlaceBall != null)
+                {
+                    AssignBallTo(Convert.ToInt32(idFieldToPlaceBall), TakenBy.Computer);
+                    SwitchMoveOrder();
+                    return;
+                }
+
+                //else - random
+                idFieldToPlaceBall = GetRandomFreeField();
                 AssignBallTo(Convert.ToInt32(idFieldToPlaceBall), TakenBy.Computer);
                 SwitchMoveOrder();
             });

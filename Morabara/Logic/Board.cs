@@ -82,7 +82,69 @@ namespace Morabara.Logic
             return null;
         }
 
-        public int GetRandomFreeFIeld()
+        public int? GetIdOfPlayerTrapOrNull()
+        {
+            var playerFields = GetIdsTakenBy(TakenBy.Player);
+            var nobodyFields = GetIdsTakenBy(TakenBy.Nobody);
+
+            //find where player have only one ball and rest of fields is unassigned
+            var linesWhereOnlyPlayerHasOneBall = possibleThrees.Where(t => t.Intersect(playerFields).Count() == 1)
+                .Where(t2 => t2.Intersect(nobodyFields).Count() == 2).ToList();
+
+            //check if any of this lines interseted by nobodyField
+            foreach (var line in linesWhereOnlyPlayerHasOneBall)
+            {
+                foreach (var line2 in linesWhereOnlyPlayerHasOneBall)
+                {
+                    if (line.Intersect(line2).Count() == 1 && GetAssigment(line2.Intersect(line).First()) == TakenBy.Nobody)
+                    {
+                        return line2.Intersect(line).First();
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public int? GetIdOfFieldToMakeTrap()
+        {
+            var computerFields = GetIdsTakenBy(TakenBy.Computer);
+            var nobodyFields = GetIdsTakenBy(TakenBy.Nobody);
+            //find where computer have only one ball and rest of fields is unassigned
+            var linesWhereOnlyComputerHasOneBall = possibleThrees.Where(t => t.Intersect(computerFields).Count() == 1)
+                .Where(t2 => t2.Intersect(nobodyFields).Count() == 2).ToList();
+
+            //place third ball
+            //check if any of this lines interseted by nobodyField
+            foreach (var line in linesWhereOnlyComputerHasOneBall)
+            {
+                foreach (var line2 in linesWhereOnlyComputerHasOneBall)
+                {
+                    if (line.Intersect(line2).Count() == 1 && GetAssigment(line2.Intersect(line).First()) == TakenBy.Nobody)
+                    {
+                        return line2.Intersect(line).First();
+                    }
+                }
+            }
+
+            //place second ball
+            //check if exist intersection by all unassigned line
+            var linesWithoutBalls = possibleThrees.Where(t2 => t2.Intersect(nobodyFields).Count() == 3).ToList();
+            foreach (var line in linesWhereOnlyComputerHasOneBall)
+            {
+                foreach (var line2 in linesWithoutBalls)
+                {
+                    if (line.Intersect(line2).Count() == 1)
+                    {
+                        return line2.First(it => it != line.Intersect(line2).First());
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public int GetRandomFreeField()
         {
             var freeFields = GetIdsTakenBy(TakenBy.Nobody).ToList();
 
