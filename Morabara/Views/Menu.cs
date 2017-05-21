@@ -126,7 +126,7 @@ namespace Morabara.Views
             {
                 if (newGameButton.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y))
                 {
-                    MessageBox.Show("Not implemented yet");
+                    new Game();
                 }
                 else if (topButton.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y))
                 {

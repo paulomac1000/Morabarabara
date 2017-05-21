@@ -2,7 +2,7 @@
 
 namespace Morabara.Views
 {
-    internal class Settings : BaseWindow
+    public class Settings : BaseWindow
     {
     }
 }

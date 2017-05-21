@@ -12,7 +12,7 @@ namespace Morabara.Views.Base
         protected readonly RenderWindow Window;
         protected readonly Event Event;
         protected readonly Font Font;
-        protected bool isDisposed;
+        protected bool IsDisposed;
 
         public BaseWindow()
         {
@@ -27,7 +27,6 @@ namespace Morabara.Views.Base
 
             Window.KeyPressed += (sender, e) =>
             {
-                var window = (Window)sender;
                 if (e.Code == Keyboard.Key.Escape)
                     WindowsStack.CloseLastWindow();
             };
@@ -35,16 +34,15 @@ namespace Morabara.Views.Base
             Event = new Event();
 
             Font = new Font("Data/Font/zorque.ttf");
-            if (Font.CPointer == IntPtr.Zero)
-            {
-                MessageBox.Show("Could't load Data/Font/zorque.ttf");
-                throw new LoadingFailedException("font");
-            }
+            if (Font.CPointer != IntPtr.Zero) return;
+
+            MessageBox.Show("Could't load Data/Font/zorque.ttf");
+            throw new LoadingFailedException("font");
         }
 
         protected void Dispose()
         {
-            if (!isDisposed)
+            if (!IsDisposed)
             {
                 Window.Close();
             }
