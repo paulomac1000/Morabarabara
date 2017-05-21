@@ -15,13 +15,13 @@ namespace Morabara.Models
             PositionX = positionX;
             PositionY = positionY;
 
+            BelongsToThree = false;
             TakenBy = TakenBy.Nobody;
         }
 
         public int Id { get; private set; }
 
         private TakenBy takenBy;
-
         public TakenBy TakenBy
         {
             get
@@ -78,6 +78,8 @@ namespace Morabara.Models
                 takenBy = value;
             }
         }
+
+        public bool BelongsToThree { get; set; }
 
         public int PositionX { get; private set; }
         public int PositionY { get; private set; }

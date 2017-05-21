@@ -14,7 +14,7 @@ namespace Morabara.Views
     {
         private readonly Sprite backgroundSprite;
         private readonly Sprite boardSprite;
-        private readonly Board board;
+        private readonly GameLogic gameLogic;
 
         public Game()
         {
@@ -33,7 +33,7 @@ namespace Morabara.Views
                 throw new LoadingFailedException("texture");
             }
             boardSprite = new Sprite(boardTexture) { Position = new Vector2f(Setting.BoardMarginX, Setting.BoardMarginY) };
-            board = new Board();
+            gameLogic = new GameLogic();
 
             bindEvents();
             start();
@@ -48,7 +48,7 @@ namespace Morabara.Views
 
                 Window.Draw(backgroundSprite);
                 Window.Draw(boardSprite);
-                foreach (var circle in board.GetAllBalls())
+                foreach (var circle in gameLogic.GetAllBalls())
                 {
                     Window.Draw(circle);
                 }
@@ -65,18 +65,17 @@ namespace Morabara.Views
 
             Window.MouseButtonReleased += (sender, args) =>
             {
-                foreach (var field in board.GetAllFields())
+                if (!gameLogic.IsPlayerMove) return;
+
+                foreach (var field in gameLogic.GetAllFields())
                 {
                     if (!field.Circle.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y)) continue;
 
-                    if (field.TakenBy == TakenBy.Nobody)
-                    {
-                        board.AssignBallTo(field.Id, TakenBy.Player);
-                    }
-                    else
-                    {
-                        board.RemoveAssignmentFromBall(field.Id);
-                    }
+                    if (field.TakenBy != TakenBy.Nobody) continue;
+
+                    gameLogic.AssignBallTo(field.Id, TakenBy.Player);
+                    gameLogic.SwitchMoveOrder();
+                    gameLogic.MakeComputerMove();
                 }
             };
         }
