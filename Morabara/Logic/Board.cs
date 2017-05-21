@@ -1,4 +1,5 @@
-﻿using Morabara.Models;
+﻿using System;
+using Morabara.Models;
 using SFML.Graphics;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,7 +48,7 @@ namespace Morabara.Logic
             return fields.Find(f => f.Id == id).TakenBy;
         }
 
-        public int? GetIdOfThirdFieldInLineOrNull()
+        public int? GetIdOfThirdComputerFieldInLineOrNull()
         {
             var computerFieldsIds = fields.Where(cf => cf.TakenBy == TakenBy.Computer).Select(i => i.Id).ToList();
 
@@ -62,6 +63,31 @@ namespace Morabara.Logic
                 return third;
             }
             return null;
+        }
+
+        public int? GetIdOfThirdPlayerFieldInLineOrNull()
+        {
+            var playerIdsFields = fields.Where(pf => pf.TakenBy == TakenBy.Player).Select(i => i.Id).ToList();
+
+            foreach (var field in possibleThrees)
+            {
+                var intersected = playerIdsFields.Intersect(field).ToList();
+                if (intersected.Count != 2) continue;
+
+                var third = field.First(f => playerIdsFields.All(cf => cf != f));
+
+                if (GetAssigment(third) != TakenBy.Nobody) continue;
+                return third;
+            }
+            return null;
+        }
+
+        public int GetRandomFreeFIeld()
+        {
+            var freeFields = GetIdsTakenBy(TakenBy.Nobody).ToList();
+
+            var r = new Random(DateTime.Now.Millisecond);
+            return freeFields.ElementAt(r.Next(0, freeFields.Count));
         }
 
         private void InitFieldList()
@@ -105,28 +131,31 @@ namespace Morabara.Logic
         {
             possibleThrees = new List<int[]>
             {
-                new int[] {1, 2, 3},
-                new int[] {4,5,6},
-                new int[] {7,8,9},
-                new int[] {10,11,12},
-                new int[] {13,14,15},
-                new int[] {16,17,18},
-                new int[] {19,20,21},
-                new int[] {22,23,24},
+                //vertically |
+                new [] {1, 2, 3},
+                new [] {4,5,6},
+                new [] {7,8,9},
+                new [] {10,11,12},
+                new [] {13,14,15},
+                new [] {16,17,18},
+                new [] {19,20,21},
+                new [] {22,23,24},
 
-                new int[] {1,10,22},
-                new int[] {4,11,19},
-                new int[] {7,12,16},
-                new int[] {2,5,8},
-                new int[] {17,20,23},
-                new int[] {9,13,18},
-                new int[] {6,14,21},
-                new int[] {3,15,24},
+                //horizontally -
+                new [] {1,10,22},
+                new [] {4,11,19},
+                new [] {7,12,16},
+                new [] {2,5,8},
+                new [] {17,20,23},
+                new [] {9,13,18},
+                new [] {6,14,21},
+                new [] {3,15,24},
 
-                new int[] {1,4,7},
-                new int[] {3,6,9},
-                new int[] {16,19,22},
-                new int[] {18,21,24}
+                //obliquely /
+                new [] {1,4,7},
+                new [] {3,6,9},
+                new [] {16,19,22},
+                new [] {18,21,24}
             };
         }
     }
