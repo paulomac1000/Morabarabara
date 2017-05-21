@@ -88,7 +88,14 @@ namespace Morabara.Logic
                 }
 
                 //try make a three
-                //TODO
+                idFieldToPlaceBall = GetIdForCreatingThreeOrNull();
+                if (idFieldToPlaceBall != null)
+                {
+                    AssignBallTo(Convert.ToInt32(idFieldToPlaceBall), TakenBy.Computer);
+                    SwitchMoveOrder();
+                    Debug.WriteLine("Try to create three in line.");
+                    return;
+                }
 
                 //else - random
                 idFieldToPlaceBall = GetRandomFreeField();
@@ -196,6 +203,17 @@ namespace Morabara.Logic
             }
 
             return null;
+        }
+
+        public int? GetIdForCreatingThreeOrNull()
+        {
+            var computerFields = GetIdsTakenBy(TakenBy.Computer);
+            var nobodyFields = GetIdsTakenBy(TakenBy.Nobody);
+            //find where computer have only one ball and rest of fields is unassigned
+            var linesWhereOnlyComputerHasOneBall = possibleThrees.Where(t => t.Intersect(computerFields).Count() == 1)
+                .Where(t2 => t2.Intersect(nobodyFields).Count() == 2).ToList();
+
+            return linesWhereOnlyComputerHasOneBall.FirstOrDefault()?.First(f => GetAssigment(f) == TakenBy.Nobody);
         }
 
         public int GetRandomFreeField()
