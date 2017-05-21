@@ -101,7 +101,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Logic\Board.cs" />
     <Compile Include="Logic\GameLogic.cs" />
     <Compile Include="Logic\Start.cs" />
     <Compile Include="Logic\TopLogic.cs" />

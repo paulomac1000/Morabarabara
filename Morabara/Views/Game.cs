@@ -75,7 +75,6 @@ namespace Morabara.Views
 
                     gameLogic.AssignBallTo(field.Id, TakenBy.Player);
                     gameLogic.SwitchMoveOrder();
-                    gameLogic.MakeComputerMove();
                 }
             };
         }

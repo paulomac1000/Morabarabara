@@ -1,45 +1,69 @@
-﻿using System;
+﻿using Morabara.Models;
+using SFML.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using Morabara.Models;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Morabara.Logic
 {
-    public class GameLogic : Board
+    public class GameLogic
     {
-        public bool IsPlayerMove { get; private set; }
+        #region properties & constructor
+
+        public bool IsPlayerMove { get; set; }
+        private List<Field> fields;
+        private List<int[]> possibleThrees;
+        private bool IsFirstStage { get; }
+        private bool IsPlayerStarting { get; }
+        private int FirstStageRound { get; set; }
 
         public GameLogic()
         {
-            IsPlayerMove = true;
+            var dialogResult = MessageBox.Show("Do You want to start?", "Who has to start", MessageBoxButtons.YesNo);
+            IsPlayerStarting = dialogResult != DialogResult.No;
+            IsFirstStage = true;
+            
+            InitFieldList();
+            InitPossibleThrees();
+            IsPlayerMove = IsPlayerStarting;
+
+            if (!IsPlayerMove)
+            {
+                MakeComputerMove();
+            }
         }
 
-        public void SwitchMoveOrder()
-        {
-            IsPlayerMove = !IsPlayerMove;
-        }
+        #endregion properties & constructor
 
         public void MakeComputerMove()
         {
-            var computerMove = Task.Run(() => {
+            if (!GetIdsTakenBy(TakenBy.Nobody).Any()) return;
+
+            Task.Run(() =>
+            {
                 Thread.Sleep(1500);
                 int? idFieldToPlaceBall = null;
 
                 //check if can make three and make first found possibility
-                idFieldToPlaceBall =  GetIdOfThirdComputerFieldInLineOrNull();
+                idFieldToPlaceBall = GetIdOfThirdComputerFieldInLineOrNull();
                 if (idFieldToPlaceBall != null)
                 {
                     AssignBallTo(Convert.ToInt32(idFieldToPlaceBall), TakenBy.Computer);
                     SwitchMoveOrder();
+                    Debug.WriteLine("Making three in line.");
                     return;
                 }
-                //chceck if player can make three and block it first found possibility
+                //check if player can make three and block it first found possibility
                 idFieldToPlaceBall = GetIdOfThirdPlayerFieldInLineOrNull();
                 if (idFieldToPlaceBall != null)
                 {
                     AssignBallTo(Convert.ToInt32(idFieldToPlaceBall), TakenBy.Computer);
                     SwitchMoveOrder();
+                    Debug.WriteLine("Prevent making three by Player.");
                     return;
                 }
 
@@ -49,23 +73,285 @@ namespace Morabara.Logic
                 {
                     AssignBallTo(Convert.ToInt32(idFieldToPlaceBall), TakenBy.Computer);
                     SwitchMoveOrder();
+                    Debug.WriteLine("Prevent the player from creating a trap.");
                     return;
                 }
 
-                //try to make trap
+                //try to create a trap
                 idFieldToPlaceBall = GetIdOfFieldToMakeTrap();
                 if (idFieldToPlaceBall != null)
                 {
                     AssignBallTo(Convert.ToInt32(idFieldToPlaceBall), TakenBy.Computer);
                     SwitchMoveOrder();
+                    Debug.WriteLine("Try to create a trap.");
                     return;
                 }
+
+                //try make a three
+                //TODO
 
                 //else - random
                 idFieldToPlaceBall = GetRandomFreeField();
                 AssignBallTo(Convert.ToInt32(idFieldToPlaceBall), TakenBy.Computer);
                 SwitchMoveOrder();
+                Debug.WriteLine("Push ball at random place.");
             });
         }
+
+        #region computer SI methods
+
+        #region first stage
+
+        public int? GetIdOfThirdComputerFieldInLineOrNull()
+        {
+            var computerFieldsIds = fields.Where(cf => cf.TakenBy == TakenBy.Computer).Select(i => i.Id).ToList();
+
+            foreach (var field in possibleThrees)
+            {
+                var intersected = computerFieldsIds.Intersect(field).ToList();
+                if (intersected.Count != 2) continue;
+
+                var third = field.First(f => computerFieldsIds.All(cf => cf != f));
+
+                if (GetAssigment(third) != TakenBy.Nobody) continue;
+                return third;
+            }
+            return null;
+        }
+
+        public int? GetIdOfThirdPlayerFieldInLineOrNull()
+        {
+            var playerIdsFields = fields.Where(pf => pf.TakenBy == TakenBy.Player).Select(i => i.Id).ToList();
+
+            foreach (var field in possibleThrees)
+            {
+                var intersected = playerIdsFields.Intersect(field).ToList();
+                if (intersected.Count != 2) continue;
+
+                var third = field.First(f => playerIdsFields.All(cf => cf != f));
+
+                if (GetAssigment(third) != TakenBy.Nobody) continue;
+                return third;
+            }
+            return null;
+        }
+
+        public int? GetIdOfPlayerTrapOrNull()
+        {
+            var playerFields = GetIdsTakenBy(TakenBy.Player);
+            var nobodyFields = GetIdsTakenBy(TakenBy.Nobody);
+
+            //find where player have only one ball and rest of fields is unassigned
+            var linesWhereOnlyPlayerHasOneBall = possibleThrees.Where(t => t.Intersect(playerFields).Count() == 1)
+                .Where(t2 => t2.Intersect(nobodyFields).Count() == 2).ToList();
+
+            //check if any of this lines interseted by nobodyField
+            foreach (var line in linesWhereOnlyPlayerHasOneBall)
+            {
+                foreach (var line2 in linesWhereOnlyPlayerHasOneBall)
+                {
+                    if (line.Intersect(line2).Count() == 1 && GetAssigment(line2.Intersect(line).First()) == TakenBy.Nobody)
+                    {
+                        return line2.Intersect(line).First();
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public int? GetIdOfFieldToMakeTrap()
+        {
+            var computerFields = GetIdsTakenBy(TakenBy.Computer);
+            var nobodyFields = GetIdsTakenBy(TakenBy.Nobody);
+            //find where computer have only one ball and rest of fields is unassigned
+            var linesWhereOnlyComputerHasOneBall = possibleThrees.Where(t => t.Intersect(computerFields).Count() == 1)
+                .Where(t2 => t2.Intersect(nobodyFields).Count() == 2).ToList();
+
+            //place third ball
+            //check if any of this lines interseted by nobodyField
+            foreach (var line in linesWhereOnlyComputerHasOneBall)
+            {
+                foreach (var line2 in linesWhereOnlyComputerHasOneBall)
+                {
+                    if (line.Intersect(line2).Count() == 1 && GetAssigment(line2.Intersect(line).First()) == TakenBy.Nobody)
+                    {
+                        return line2.Intersect(line).First();
+                    }
+                }
+            }
+
+            //place second ball
+            //check if exist intersection by all unassigned line
+            var linesWithoutBalls = possibleThrees.Where(t2 => t2.Intersect(nobodyFields).Count() == 3).ToList();
+            foreach (var line in linesWhereOnlyComputerHasOneBall)
+            {
+                foreach (var line2 in linesWithoutBalls)
+                {
+                    if (line.Intersect(line2).Count() == 1)
+                    {
+                        return line2.First(it => it != line.Intersect(line2).First());
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public int GetRandomFreeField()
+        {
+            var freeFields = GetIdsTakenBy(TakenBy.Nobody).ToList();
+
+            var r = new Random(DateTime.Now.Millisecond);
+            return freeFields.ElementAt(r.Next(0, freeFields.Count));
+        }
+
+        #endregion first stage
+
+        #endregion computer SI
+
+        public IEnumerable<CircleShape> GetAllBalls()
+        {
+            return fields.Select(s => s.Circle);
+        }
+
+        public IEnumerable<Field> GetAllFields()
+        {
+            return fields;
+        }
+
+        public void AssignBallTo(int id, TakenBy takenBy)
+        {
+            CheckAndIncrementRound(takenBy);
+
+            fields.Find(f => f.Id == id).TakenBy = takenBy;
+
+            if (takenBy == TakenBy.Nobody) return;
+            CheckIfCreatedThree(id, takenBy);
+        }
+
+        public void CheckIfCreatedThree(int id, TakenBy takenBy)
+        {
+            var linesWhereFieldIdBelongs = possibleThrees.Where(t => t.Contains(id));
+            foreach (var line in linesWhereFieldIdBelongs)
+            {
+                if (!line.All(field => GetAssigment(field) == takenBy)) continue;
+                foreach (var field in fields)
+                {
+                    if (!line.Contains(field.Id)) continue;
+
+                    field.BelongsToThree = true;
+                }
+            }
+        }
+
+        public void RemoveAssignmentFromBall(int id)
+        {
+            fields.Find(f => f.Id == id).TakenBy = TakenBy.Nobody;
+        }
+
+        public IEnumerable<int> GetIdsTakenBy(TakenBy takenBy)
+        {
+            return fields.Where(f => f.TakenBy == takenBy).Select(i => i.Id);
+        }
+
+        public TakenBy GetAssigment(int id)
+        {
+            return fields.Find(f => f.Id == id).TakenBy;
+        }
+
+        public void SwitchMoveOrder()
+        {
+            IsPlayerMove = !IsPlayerMove;
+            if (!IsPlayerMove)
+            {
+                MakeComputerMove();
+            }
+        }
+
+        public void CheckAndIncrementRound(TakenBy takenBy)
+        {
+            if (IsPlayerStarting && takenBy == TakenBy.Player)
+            {
+                FirstStageRound++;
+            }
+            else if (!IsPlayerStarting && takenBy == TakenBy.Computer)
+            {
+                FirstStageRound++;
+            }
+        }
+
+        #region init methods
+
+        private void InitPossibleThrees()
+        {
+            possibleThrees = new List<int[]>
+            {
+                //vertically |
+                new [] {1, 2, 3},
+                new [] {4,5,6},
+                new [] {7,8,9},
+                new [] {10,11,12},
+                new [] {13,14,15},
+                new [] {16,17,18},
+                new [] {19,20,21},
+                new [] {22,23,24},
+
+                //horizontally -
+                new [] {1,10,22},
+                new [] {4,11,19},
+                new [] {7,12,16},
+                new [] {2,5,8},
+                new [] {17,20,23},
+                new [] {9,13,18},
+                new [] {6,14,21},
+                new [] {3,15,24},
+
+                //obliquely /
+                new [] {1,4,7},
+                new [] {3,6,9},
+                new [] {16,19,22},
+                new [] {18,21,24}
+            };
+        }
+
+        private void InitFieldList()
+        {
+            fields = new List<Field>
+            {
+                new Field(1, 21 - Setting.BallRadius + Setting.BoardMarginX, 16 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(2, 237 - Setting.BallRadius + Setting.BoardMarginX, 16 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(3, 457 - Setting.BallRadius + Setting.BoardMarginX, 16 - Setting.BallRadius + Setting.BoardMarginY),
+
+                new Field(4, 95 - Setting.BallRadius + Setting.BoardMarginX, 90 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(5, 236 - Setting.BallRadius + Setting.BoardMarginX, 90 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(6, 383 - Setting.BallRadius + Setting.BoardMarginX, 90 - Setting.BallRadius + Setting.BoardMarginY),
+
+                new Field(7, 167 - Setting.BallRadius + Setting.BoardMarginX, 162 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(8, 237 - Setting.BallRadius + Setting.BoardMarginX, 162 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(9, 307 - Setting.BallRadius + Setting.BoardMarginX, 162 - Setting.BallRadius + Setting.BoardMarginY),
+
+                new Field(10, 21 - Setting.BallRadius + Setting.BoardMarginX, 232 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(11, 95 - Setting.BallRadius + Setting.BoardMarginX, 232 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(12, 167 - Setting.BallRadius + Setting.BoardMarginX, 232 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(13, 307 - Setting.BallRadius + Setting.BoardMarginX, 232 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(14, 387 - Setting.BallRadius + Setting.BoardMarginX, 232 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(15, 457 - Setting.BallRadius + Setting.BoardMarginX, 232 - Setting.BallRadius + Setting.BoardMarginY),
+
+                new Field(16, 167 - Setting.BallRadius + Setting.BoardMarginX, 302 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(17, 237 - Setting.BallRadius + Setting.BoardMarginX, 302 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(18, 307 - Setting.BallRadius + Setting.BoardMarginX, 302 - Setting.BallRadius + Setting.BoardMarginY),
+
+                new Field(19, 95 - Setting.BallRadius + Setting.BoardMarginX, 378 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(20, 236 - Setting.BallRadius + Setting.BoardMarginX, 378 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(21, 383 - Setting.BallRadius + Setting.BoardMarginX, 378 - Setting.BallRadius + Setting.BoardMarginY),
+
+                new Field(22, 21 - Setting.BallRadius + Setting.BoardMarginX, 452 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(23, 237 - Setting.BallRadius + Setting.BoardMarginX, 452 - Setting.BallRadius + Setting.BoardMarginY),
+                new Field(24, 457 - Setting.BallRadius + Setting.BoardMarginX, 452 - Setting.BallRadius + Setting.BoardMarginY)
+            };
+        }
+
+        #endregion init methods
     }
 }

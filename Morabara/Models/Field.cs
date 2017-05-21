@@ -38,7 +38,6 @@ namespace Morabara.Models
                             Position = new Vector2f(PositionX, PositionY),
                             FillColor = new Color(Color.Transparent)
                         };
-                        Debug.WriteLine("set circle to nobody");
                         break;
 
                     case TakenBy.Player:
@@ -53,7 +52,6 @@ namespace Morabara.Models
                             Position = new Vector2f(PositionX, PositionY),
                             Texture = playerBallTexture
                         };
-                        Debug.WriteLine("set circle to player");
                         break;
 
                     case TakenBy.Computer:
@@ -68,7 +66,6 @@ namespace Morabara.Models
                             Position = new Vector2f(PositionX, PositionY),
                             Texture = computerBallTexture
                         };
-                        Debug.WriteLine("set circle to computer");
                         break;
 
                     default:
