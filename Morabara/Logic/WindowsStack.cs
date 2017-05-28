@@ -6,7 +6,7 @@ namespace Morabara.Logic
 {
     public static class WindowsStack
     {
-        private readonly static Stack<RenderWindow> Stack;
+        private static readonly Stack<RenderWindow> Stack;
 
         static WindowsStack()
         {

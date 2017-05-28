@@ -15,6 +15,8 @@ namespace Morabara.Views
         private readonly Sprite backgroundSprite;
         private readonly Sprite boardSprite;
         private readonly GameLogic gameLogic;
+        private readonly Text ActionName;
+
 
         public Game()
         {

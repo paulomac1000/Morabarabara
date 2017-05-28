@@ -17,16 +17,18 @@ namespace Morabara.Logic
         public bool IsPlayerMove { get; set; }
         private List<Field> fields;
         private List<int[]> possibleThrees;
-        private bool IsFirstStage { get; }
+        private bool IsFirstStage { get; set; }
         private bool IsPlayerStarting { get; }
         private int FirstStageRound { get; set; }
+        private Random Random { get; }
 
         public GameLogic()
         {
             var dialogResult = MessageBox.Show("Do You want to start?", "Who has to start", MessageBoxButtons.YesNo);
             IsPlayerStarting = dialogResult != DialogResult.No;
             IsFirstStage = true;
-            
+            Random = new Random(DateTime.Now.Millisecond);
+
             InitFieldList();
             InitPossibleThrees();
             IsPlayerMove = IsPlayerStarting;
@@ -40,6 +42,18 @@ namespace Morabara.Logic
         #endregion properties & constructor
 
         public void MakeComputerMove()
+        {
+            if (IsFirstStage)
+            {
+                PlaceComputerBall();
+            }
+            else
+            {
+                MoveComputerBall();
+            }
+        }
+
+        public void PlaceComputerBall()
         {
             if (!GetIdsTakenBy(TakenBy.Nobody).Any()) return;
 
@@ -55,6 +69,7 @@ namespace Morabara.Logic
                     AssignBallTo(Convert.ToInt32(idFieldToPlaceBall), TakenBy.Computer);
                     SwitchMoveOrder();
                     Debug.WriteLine("Making three in line.");
+                    TakeEnemyBall();
                     return;
                 }
                 //check if player can make three and block it first found possibility
@@ -103,6 +118,49 @@ namespace Morabara.Logic
                 SwitchMoveOrder();
                 Debug.WriteLine("Push ball at random place.");
             });
+        }
+
+        public void TakeEnemyBall()
+        {
+            Task.Run(() =>
+            {
+                Thread.Sleep(500);
+
+                //when all player ball are in three computer can take one from any three
+                var playerBalls = fields.Where(f => f.TakenBy == TakenBy.Player).ToList();
+                if (playerBalls.All(b => b.BelongsToThree)) 
+                {
+                    RemoveAssignmentFromBall(playerBalls.ElementAt(Random.Next(0, playerBalls.Count - 1)).Id);
+                    Debug.WriteLine("All player ball making three so deleting random player ball.");
+                    return;
+                }
+
+                int? idPlayerBallToRemove = null;
+                idPlayerBallToRemove = GetIdOfBallConnectedPlayerTrap();
+                if (idPlayerBallToRemove != null)
+                {
+                    RemoveAssignmentFromBall(Convert.ToInt32(idPlayerBallToRemove));
+                    Debug.WriteLine("Removed player ball concatenated trap.");
+                    return;
+                }
+
+                idPlayerBallToRemove = GetIdOfSecondBallWhichCouldMakeThree();
+                if (idPlayerBallToRemove != null)
+                {
+                    RemoveAssignmentFromBall(Convert.ToInt32(idPlayerBallToRemove));
+                    Debug.WriteLine("Removed player second ball concatenated trap.");
+                    return;
+                }
+
+                idPlayerBallToRemove = GetIdOfRandomPlayerBall();
+                RemoveAssignmentFromBall(Convert.ToInt32(idPlayerBallToRemove));
+                Debug.WriteLine("Removed random player ball.");
+            });
+        }
+
+        public void MoveComputerBall()
+        {
+
         }
 
         #region computer SI methods
@@ -226,6 +284,56 @@ namespace Morabara.Logic
 
         #endregion first stage
 
+        #region removing player ball
+
+        public int? GetIdOfBallConnectedPlayerTrap()
+        {
+            var playerFields = GetIdsTakenBy(TakenBy.Player).ToList();
+            var nobodyFields = GetIdsTakenBy(TakenBy.Nobody);
+
+            //find where player have two ball and third is unassigned
+            var linesWhereOnlyPlayerHasTwoBalls = possibleThrees.Where(t => t.Intersect(playerFields).Count() == 2)
+                .Where(t2 => t2.Intersect(nobodyFields).Count() == 1).ToList();
+
+            foreach (var l1 in linesWhereOnlyPlayerHasTwoBalls)
+            {
+                foreach (var l2 in linesWhereOnlyPlayerHasTwoBalls)
+                {
+                    var commonElements = l1.Intersect(l2).ToList();
+                    if (commonElements.Count == 1 && playerFields.Contains(commonElements.First()))
+                    {
+                        return commonElements.First();
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public int? GetIdOfSecondBallWhichCouldMakeThree()
+        {
+            var playerFields = GetIdsTakenBy(TakenBy.Player);
+            var nobodyFields = GetIdsTakenBy(TakenBy.Nobody);
+
+            var firstLineWhereOnlyPlayerHasTwoBalls =  possibleThrees
+                .Where(t => t.Intersect(playerFields).Count() == 2)
+                .FirstOrDefault(t2 => t2.Intersect(nobodyFields).Count() == 1);
+
+            return firstLineWhereOnlyPlayerHasTwoBalls?.First(l => playerFields.Contains(l));
+        }
+
+        public int GetIdOfRandomPlayerBall()
+        {
+            var nonInThreePlayerBall = fields.Where(f => f.TakenBy == TakenBy.Player).Where(b => b.BelongsToThree == false).ToList();
+            return nonInThreePlayerBall.ElementAt(Random.Next(0, nonInThreePlayerBall.Count - 1)).Id;
+        }
+
+        #endregion
+
+        #region second stage
+
+        #endregion
+
         #endregion computer SI
 
         public IEnumerable<CircleShape> GetAllBalls()
@@ -265,7 +373,18 @@ namespace Morabara.Logic
 
         public void RemoveAssignmentFromBall(int id)
         {
-            fields.Find(f => f.Id == id).TakenBy = TakenBy.Nobody;
+            if (!fields.ElementAt(id).BelongsToThree) return;
+
+            var threesWithThisElement = possibleThrees.Where(t1 => t1.Contains(id))
+                .Where(t2 => t2.All(e => GetAssigment(e) == TakenBy.Player));
+
+            foreach (var t in threesWithThisElement)
+            {
+                foreach (var e in t)
+                {
+                    fields.ElementAt(e).TakenBy = TakenBy.Nobody;
+                }
+            }
         }
 
         public IEnumerable<int> GetIdsTakenBy(TakenBy takenBy)
@@ -289,13 +408,20 @@ namespace Morabara.Logic
 
         public void CheckAndIncrementRound(TakenBy takenBy)
         {
-            if (IsPlayerStarting && takenBy == TakenBy.Player)
+            if (FirstStageRound == Setting.NumberOfPlayerBall)
             {
-                FirstStageRound++;
+                IsFirstStage = false;
             }
-            else if (!IsPlayerStarting && takenBy == TakenBy.Computer)
+            else
             {
-                FirstStageRound++;
+                if (IsPlayerStarting && takenBy == TakenBy.Player)
+                {
+                    FirstStageRound++;
+                }
+                else if (!IsPlayerStarting && takenBy == TakenBy.Computer)
+                {
+                    FirstStageRound++;
+                }
             }
         }
 
