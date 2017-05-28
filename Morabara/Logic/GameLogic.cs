@@ -57,7 +57,7 @@ namespace Morabara.Logic
         {
             if (!GetIdsTakenBy(TakenBy.Nobody).Any()) return;
 
-            Task.Run(() =>
+            Task firstStage = new Task(() =>
             {
                 Thread.Sleep(1500);
                 int? idFieldToPlaceBall = null;
@@ -118,6 +118,22 @@ namespace Morabara.Logic
                 SwitchMoveOrder();
                 Debug.WriteLine("Push ball at random place.");
             });
+
+            Task secondStage = new Task(() =>
+            {
+
+            });
+
+            if(IsFirstStage)
+            {
+                firstStage.Start();
+                firstStage.Wait();
+            }
+            else
+            {
+                secondStage.Start();
+                secondStage.Wait();
+            }
         }
 
         public void TakeEnemyBall()
