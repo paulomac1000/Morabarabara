@@ -45,7 +45,7 @@ namespace Morabara.Views
             boardSprite = new Sprite(boardTexture) { Position = new Vector2f(Setting.BoardMarginX, Setting.BoardMarginY) };
             gameLogic = new GameLogic();
 
-            PlayerName = new Text(Setting.PlayerName, Font)
+            PlayerName = new Text($"Nick: {Setting.PlayerName}", Font)
             {
                 CharacterSize = 30,
                 Style = Text.Styles.Regular,
@@ -53,7 +53,7 @@ namespace Morabara.Views
                 Color = Color.Blue
             };
 
-            PlayerPoints = new Text("Points", Font)
+            PlayerPoints = new Text($"Points: {0}", Font)
             {
                 CharacterSize = 30,
                 Style = Text.Styles.Regular,
@@ -61,7 +61,7 @@ namespace Morabara.Views
                 Color = Color.Blue
             };
 
-            MoveNumber = new Text("Move: 8", Font)
+            MoveNumber = new Text($"Move: {8}", Font)
             {
                 CharacterSize = 30,
                 Style = Text.Styles.Regular,
@@ -72,7 +72,7 @@ namespace Morabara.Views
             stopwatch = new Stopwatch();
             stopwatch.Start();
             
-            PlayTime = new Text($"0:0", Font)
+            PlayTime = new Text($"0 m. 0 s.", Font)
             {
                 CharacterSize = 30,
                 Style = Text.Styles.Regular,
@@ -80,7 +80,7 @@ namespace Morabara.Views
                 Color = Color.Blue
             };
 
-            WchichMove = new Text("Wchich move", Font)
+            WchichMove = new Text("Move: Your", Font)
             {
                 CharacterSize = 30,
                 Style = Text.Styles.Regular,
@@ -157,7 +157,7 @@ namespace Morabara.Views
             var seconds = stopwatch.ElapsedMilliseconds / 1000 - (minutes * 60);
             PlayTime.DisplayedString = $"{minutes} m. {seconds} s.";
 
-            WchichMove.DisplayedString = (gameLogic.IsPlayerMove) ? "Your move" : "Computer move";
+            WchichMove.DisplayedString = (gameLogic.IsPlayerMove) ? "Move: Your" : "move: Comp.";
 
             ActionName.DisplayedString = "Action name";
         }
