@@ -56,7 +56,7 @@ namespace Morabara.Logic
         public void PlaceComputerBall()
         {
             if (!GetIdsTakenBy(TakenBy.Nobody).Any()) return;
-
+       
             Task firstStage = new Task(() =>
             {
                 Thread.Sleep(1500);
@@ -119,26 +119,12 @@ namespace Morabara.Logic
                 Debug.WriteLine("Push ball at random place.");
             });
 
-            Task secondStage = new Task(() =>
-            {
-
-            });
-
-            if(IsFirstStage)
-            {
-                firstStage.Start();
-                firstStage.Wait();
-            }
-            else
-            {
-                secondStage.Start();
-                secondStage.Wait();
-            }
+            firstStage.Start();
         }
 
         public void TakeEnemyBall()
         {
-            Task.Run(() =>
+            Task takeEnemyBall = new Task(() =>
             {
                 Thread.Sleep(500);
 
@@ -146,7 +132,7 @@ namespace Morabara.Logic
                 var playerBalls = fields.Where(f => f.TakenBy == TakenBy.Player).ToList();
                 if (playerBalls.All(b => b.BelongsToThree)) 
                 {
-                    RemoveAssignmentFromBall(playerBalls.ElementAt(Random.Next(0, playerBalls.Count - 1)).Id);
+                    RemoveAssignmentFromBall(playerBalls.FirstOrDefault(f => f.Id == (Random.Next(0, playerBalls.Count - 1))).Id);
                     Debug.WriteLine("All player ball making three so deleting random player ball.");
                     return;
                 }
@@ -172,11 +158,21 @@ namespace Morabara.Logic
                 RemoveAssignmentFromBall(Convert.ToInt32(idPlayerBallToRemove));
                 Debug.WriteLine("Removed random player ball.");
             });
+
+            takeEnemyBall.Start();
+            takeEnemyBall.Wait();
         }
 
         public void MoveComputerBall()
         {
+            Task secondStage = new Task(() =>
+            {
+                Thread.Sleep(1500);
+                Debug.WriteLine("Move computer ball.");
+            });
 
+            secondStage.Start();
+            //secondStage.Wait();
         }
 
         #region computer SI methods
@@ -389,7 +385,9 @@ namespace Morabara.Logic
 
         public void RemoveAssignmentFromBall(int id)
         {
-            if (!fields.ElementAt(id).BelongsToThree) return;
+            fields.FirstOrDefault(f => f.Id == id).TakenBy = TakenBy.Nobody;
+
+            if (!fields.FirstOrDefault(f => f.Id == id).BelongsToThree) return;
 
             var threesWithThisElement = possibleThrees.Where(t1 => t1.Contains(id))
                 .Where(t2 => t2.All(e => GetAssigment(e) == TakenBy.Player));
@@ -398,7 +396,7 @@ namespace Morabara.Logic
             {
                 foreach (var e in t)
                 {
-                    fields.ElementAt(e).TakenBy = TakenBy.Nobody;
+                    fields.FirstOrDefault(f => f.Id == e).BelongsToThree = false; ;
                 }
             }
         }

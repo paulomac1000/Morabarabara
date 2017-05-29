@@ -6,6 +6,7 @@ using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
 using System;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace Morabara.Views
@@ -15,8 +16,14 @@ namespace Morabara.Views
         private readonly Sprite backgroundSprite;
         private readonly Sprite boardSprite;
         private readonly GameLogic gameLogic;
-        private readonly Text ActionName;
 
+        private readonly Text PlayerName;
+        private readonly Text PlayerPoints;
+        private readonly Text MoveNumber;
+        private readonly Stopwatch stopwatch;
+        private readonly Text PlayTime;
+        private readonly Text WchichMove;
+        private readonly Text ActionName;
 
         public Game()
         {
@@ -34,8 +41,60 @@ namespace Morabara.Views
                 MessageBox.Show("Could't load Data/Texture/plansza.png");
                 throw new LoadingFailedException("texture");
             }
+
             boardSprite = new Sprite(boardTexture) { Position = new Vector2f(Setting.BoardMarginX, Setting.BoardMarginY) };
             gameLogic = new GameLogic();
+
+            PlayerName = new Text(Setting.PlayerName, Font)
+            {
+                CharacterSize = 30,
+                Style = Text.Styles.Regular,
+                Position = new Vector2f(550, 100),
+                Color = Color.Blue
+            };
+
+            PlayerPoints = new Text("Points", Font)
+            {
+                CharacterSize = 30,
+                Style = Text.Styles.Regular,
+                Position = new Vector2f(550, 150),
+                Color = Color.Blue
+            };
+
+            MoveNumber = new Text("Move: 8", Font)
+            {
+                CharacterSize = 30,
+                Style = Text.Styles.Regular,
+                Position = new Vector2f(550, 200),
+                Color = Color.Blue
+            };
+
+            stopwatch = new Stopwatch();
+            stopwatch.Start();
+            
+            PlayTime = new Text($"0:0", Font)
+            {
+                CharacterSize = 30,
+                Style = Text.Styles.Regular,
+                Position = new Vector2f(550, 250),
+                Color = Color.Blue
+            };
+
+            WchichMove = new Text("Wchich move", Font)
+            {
+                CharacterSize = 30,
+                Style = Text.Styles.Regular,
+                Position = new Vector2f(550, 350),
+                Color = Color.Blue
+            };
+
+            ActionName = new Text("Action name", Font)
+            {
+                CharacterSize = 30,
+                Style = Text.Styles.Regular,
+                Position = new Vector2f(550, 400),
+                Color = Color.Blue
+            };
 
             bindEvents();
             start();
@@ -47,6 +106,7 @@ namespace Morabara.Views
             {
                 Window.DispatchEvents(); //init event
                 Window.Clear(); //clear window
+                updateText();
 
                 Window.Draw(backgroundSprite);
                 Window.Draw(boardSprite);
@@ -54,6 +114,13 @@ namespace Morabara.Views
                 {
                     Window.Draw(circle);
                 }
+
+                Window.Draw(PlayerName);
+                Window.Draw(PlayerPoints);
+                Window.Draw(MoveNumber);
+                Window.Draw(PlayTime);
+                Window.Draw(WchichMove);
+                Window.Draw(ActionName);
 
                 Window.Display(); //display render up view
             }
@@ -79,6 +146,20 @@ namespace Morabara.Views
                     gameLogic.SwitchMoveOrder();
                 }
             };
+        }
+
+        private void updateText()
+        {
+            PlayerPoints.DisplayedString = "Points";
+            MoveNumber.DisplayedString = "8";
+
+            var minutes = stopwatch.ElapsedMilliseconds / 1000 / 60;
+            var seconds = stopwatch.ElapsedMilliseconds / 1000 - (minutes * 60);
+            PlayTime.DisplayedString = $"{minutes} m. {seconds} s.";
+
+            WchichMove.DisplayedString = (gameLogic.IsPlayerMove) ? "Your move" : "Computer move";
+
+            ActionName.DisplayedString = "Action name";
         }
     }
 }
