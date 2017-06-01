@@ -48,7 +48,7 @@ namespace Morabara.Logic
 
         #endregion properties & constructor
 
-        public void MakeComputerMove()
+        private void MakeComputerMove()
         {
             if (IsFirstStage)
             {
@@ -62,7 +62,11 @@ namespace Morabara.Logic
             }
         }
 
-        public void PlaceComputerBall()
+        #region computer SI methods
+
+        #region first stage
+
+        private void PlaceComputerBall()
         {
             if (!GetIdsTakenBy(TakenBy.Nobody).Any()) return;
 
@@ -130,69 +134,6 @@ namespace Morabara.Logic
 
             firstStage.Start();
         }
-
-        public void TakePlayerBall()
-        {
-            Task takeEnemyBall = new Task(() =>
-            {
-                Thread.Sleep(500);
-
-                //when all player ball are in three computer can take one from any three
-                var playerBalls = fields.Where(f => f.TakenBy == TakenBy.Player).ToList();
-                if (playerBalls.All(b => b.BelongsToThree))
-                {
-                    RemoveAssignmentFromBall(playerBalls.FirstOrDefault(f => f.Id == (Random.Next(0, playerBalls.Count - 1))).Id);
-                    Debug.WriteLine("All player ball making three so deleting random player ball.");
-                    return;
-                }
-
-                int? idPlayerBallToRemove = null;
-                idPlayerBallToRemove = GetIdOfBallConnectedPlayerTrap();
-                if (idPlayerBallToRemove != null)
-                {
-                    RemoveAssignmentFromBall(Convert.ToInt32(idPlayerBallToRemove));
-                    Debug.WriteLine("Removed player ball concatenated trap.");
-                    return;
-                }
-
-                idPlayerBallToRemove = GetIdOfSecondBallWhichCouldMakeThree();
-                if (idPlayerBallToRemove != null)
-                {
-                    RemoveAssignmentFromBall(Convert.ToInt32(idPlayerBallToRemove));
-                    Debug.WriteLine("Removed player second ball concatenated trap.");
-                    return;
-                }
-
-                idPlayerBallToRemove = GetIdOfRandomPlayerBall();
-                RemoveAssignmentFromBall(Convert.ToInt32(idPlayerBallToRemove));
-                Debug.WriteLine("Removed random player ball.");
-            });
-
-            takeEnemyBall.Start();
-            takeEnemyBall.Wait();
-        }
-
-        public void TakeComputerBall(int id)
-        {
-            RemoveAssignmentFromBall(id);
-        }
-
-        public void MoveComputerBall()
-        {
-            Task secondStage = new Task(() =>
-            {
-                
-
-                Thread.Sleep(1500);
-                Debug.WriteLine("Move computer ball.");
-            });
-
-            secondStage.Start();
-        }
-
-        #region computer SI methods
-
-        #region first stage
 
         public int? GetIdOfThirdComputerFieldInLineOrNull()
         {
@@ -313,6 +254,47 @@ namespace Morabara.Logic
 
         #region removing player ball
 
+        public void TakePlayerBall()
+        {
+            Task takeEnemyBall = new Task(() =>
+            {
+                Thread.Sleep(500);
+
+                //when all player ball are in three computer can take one from any three
+                var playerBalls = fields.Where(f => f.TakenBy == TakenBy.Player).ToList();
+                if (playerBalls.All(b => b.BelongsToThree))
+                {
+                    RemoveAssignmentFromBall(playerBalls.FirstOrDefault(f => f.Id == (Random.Next(0, playerBalls.Count - 1))).Id);
+                    Debug.WriteLine("All player ball making three so deleting random player ball.");
+                    return;
+                }
+
+                int? idPlayerBallToRemove = null;
+                idPlayerBallToRemove = GetIdOfBallConnectedPlayerTrap();
+                if (idPlayerBallToRemove != null)
+                {
+                    RemoveAssignmentFromBall(Convert.ToInt32(idPlayerBallToRemove));
+                    Debug.WriteLine("Removed player ball concatenated trap.");
+                    return;
+                }
+
+                idPlayerBallToRemove = GetIdOfSecondBallWhichCouldMakeThree();
+                if (idPlayerBallToRemove != null)
+                {
+                    RemoveAssignmentFromBall(Convert.ToInt32(idPlayerBallToRemove));
+                    Debug.WriteLine("Removed player second ball concatenated trap.");
+                    return;
+                }
+
+                idPlayerBallToRemove = GetIdOfRandomPlayerBall();
+                RemoveAssignmentFromBall(Convert.ToInt32(idPlayerBallToRemove));
+                Debug.WriteLine("Removed random player ball.");
+            });
+
+            takeEnemyBall.Start();
+            takeEnemyBall.Wait();
+        }
+
         public int? GetIdOfBallConnectedPlayerTrap()
         {
             var playerFields = GetIdsTakenBy(TakenBy.Player).ToList();
@@ -357,7 +339,37 @@ namespace Morabara.Logic
 
         #endregion removing player ball
 
+        #region second stage
+
+        private void MoveComputerBall()
+        {
+            //TODO
+            Task secondStage = new Task(() =>
+            {
+                Thread.Sleep(1500);
+                Debug.WriteLine("Move computer ball.");
+            });
+
+            secondStage.Start();
+        }
+
+        #endregion second stage
+
         #endregion computer SI methods
+
+        public void TakeComputerBall(int id)
+        {
+            RemoveAssignmentFromBall(id);
+        }
+
+        public void SwitchMoveOrder()
+        {
+            IsPlayerMove = !IsPlayerMove;
+            if (!IsPlayerMove)
+            {
+                MakeComputerMove();
+            }
+        }
 
         public IEnumerable<CircleShape> GetAllBalls()
         {
@@ -379,7 +391,7 @@ namespace Morabara.Logic
             CheckIfCreatedThree(id, takenBy);
         }
 
-        public void CheckIfCreatedThree(int id, TakenBy takenBy)
+        private void CheckIfCreatedThree(int id, TakenBy takenBy)
         {
             var linesWhereFieldIdBelongs = possibleThrees.Where(t => t.Contains(id));
             var handleactionOfMakedThree = false;
@@ -412,7 +424,7 @@ namespace Morabara.Logic
             }
         }
 
-        public void RemoveAssignmentFromBall(int id)
+        private void RemoveAssignmentFromBall(int id)
         {
             fields.FirstOrDefault(f => f.Id == id).TakenBy = TakenBy.Nobody;
 
@@ -432,26 +444,17 @@ namespace Morabara.Logic
             }
         }
 
-        public IEnumerable<int> GetIdsTakenBy(TakenBy takenBy)
+        private IEnumerable<int> GetIdsTakenBy(TakenBy takenBy)
         {
             return fields.Where(f => f.TakenBy == takenBy).Select(i => i.Id);
         }
 
-        public TakenBy GetAssigment(int id)
+        private TakenBy GetAssigment(int id)
         {
             return fields.Find(f => f.Id == id).TakenBy;
         }
 
-        public void SwitchMoveOrder()
-        {
-            IsPlayerMove = !IsPlayerMove;
-            if (!IsPlayerMove)
-            {
-                MakeComputerMove();
-            }
-        }
-
-        public void CheckAndIncrementRound(TakenBy takenBy)
+        private void CheckAndIncrementRound(TakenBy takenBy)
         {
             if (FirstStageRound == Setting.NumberOfPlayerBall)
             {

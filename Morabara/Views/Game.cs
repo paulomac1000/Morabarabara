@@ -141,7 +141,7 @@ namespace Morabara.Views
             {
                 if (!gameLogic.IsPlayerMove) return;
 
-                if(gameLogic.IsFirstStage)
+                if (gameLogic.IsFirstStage && !gameLogic.PlayerCanTakeComputerBall)
                 {
                     foreach (var field in gameLogic.GetAllFields())
                     {
@@ -151,36 +151,41 @@ namespace Morabara.Views
 
                         gameLogic.AssignBallTo(field.Id, TakenBy.Player);
                         gameLogic.MoveNumber++;
-                    }
 
-                    if (gameLogic.PlayerCanTakeComputerBall)
-                    {
-                        foreach (var field in gameLogic.GetAllFields())
+                        if(!gameLogic.PlayerCanTakeComputerBall)
                         {
-                            if (!field.Circle.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y)) continue;
-
-                            if (field.TakenBy != TakenBy.Computer) continue;
-
-                            gameLogic.TakeComputerBall(field.Id);
-                            gameLogic.PlayerCanTakeComputerBall = false;
                             gameLogic.SwitchMoveOrder();
                         }
                     }
-                    else
+                }
+                else if (!gameLogic.IsFirstStage && !gameLogic.PlayerCanTakeComputerBall)
+                {
+                    MessageBox.Show("Second stage - need to be implemented.");
+                    //second stage - moving balls
+                }
+
+                if (gameLogic.PlayerCanTakeComputerBall)
+                {
+                    foreach (var field in gameLogic.GetAllFields())
                     {
+                        if (!field.Circle.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y)) continue;
+
+                        if (field.TakenBy != TakenBy.Computer) continue;
+
+                        if (field.BelongsToThree == true) continue;
+
+                        gameLogic.TakeComputerBall(field.Id);
+                        gameLogic.PlayerCanTakeComputerBall = false;
+
                         gameLogic.SwitchMoveOrder();
                     }
-                }
-                else
-                {
-                    //second stage - moving balls
                 }
             };
         }
 
         private void updateText()
         {
-            PlayerPoints.DisplayedString = $"Score: {gameLogic.PlayerPoints}-{gameLogic.ComputerPoints}";
+            PlayerPoints.DisplayedString = $"Score: P {gameLogic.PlayerPoints}-{gameLogic.ComputerPoints} C";
             MoveNumber.DisplayedString = $"Moves: {gameLogic.MoveNumber}";
 
             var minutes = stopwatch.ElapsedMilliseconds / 1000 / 60;
