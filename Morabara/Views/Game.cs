@@ -43,13 +43,18 @@ namespace Morabara.Views
             }
 
             boardSprite = new Sprite(boardTexture) { Position = new Vector2f(Setting.BoardMarginX, Setting.BoardMarginY) };
+
+            //only for not showing white screen on start when asking who starts
+            Window.Draw(backgroundSprite);
+            Window.Display();
+
             gameLogic = new GameLogic();
 
             PlayerName = new Text($"Nick: {Setting.PlayerName}", Font)
             {
                 CharacterSize = 30,
                 Style = Text.Styles.Regular,
-                Position = new Vector2f(550, 100),
+                Position = new Vector2f(550, 70),
                 Color = Color.Blue
             };
 
@@ -57,7 +62,7 @@ namespace Morabara.Views
             {
                 CharacterSize = 30,
                 Style = Text.Styles.Regular,
-                Position = new Vector2f(550, 150),
+                Position = new Vector2f(550, 120),
                 Color = Color.Blue
             };
 
@@ -65,13 +70,13 @@ namespace Morabara.Views
             {
                 CharacterSize = 30,
                 Style = Text.Styles.Regular,
-                Position = new Vector2f(550, 200),
+                Position = new Vector2f(550, 170),
                 Color = Color.Blue
             };
 
             stopwatch = new Stopwatch();
             stopwatch.Start();
-            
+
             PlayTime = new Text($"0 m. 0 s.", Font)
             {
                 CharacterSize = 30,
@@ -92,7 +97,7 @@ namespace Morabara.Views
             {
                 CharacterSize = 30,
                 Style = Text.Styles.Regular,
-                Position = new Vector2f(550, 400),
+                Position = new Vector2f(550, 450),
                 Color = Color.Blue
             };
 
@@ -136,30 +141,55 @@ namespace Morabara.Views
             {
                 if (!gameLogic.IsPlayerMove) return;
 
-                foreach (var field in gameLogic.GetAllFields())
+                if(gameLogic.IsFirstStage)
                 {
-                    if (!field.Circle.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y)) continue;
+                    foreach (var field in gameLogic.GetAllFields())
+                    {
+                        if (!field.Circle.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y)) continue;
 
-                    if (field.TakenBy != TakenBy.Nobody) continue;
+                        if (field.TakenBy != TakenBy.Nobody) continue;
 
-                    gameLogic.AssignBallTo(field.Id, TakenBy.Player);
-                    gameLogic.SwitchMoveOrder();
+                        gameLogic.AssignBallTo(field.Id, TakenBy.Player);
+                        gameLogic.MoveNumber++;
+                    }
+
+                    if (gameLogic.PlayerCanTakeComputerBall)
+                    {
+                        foreach (var field in gameLogic.GetAllFields())
+                        {
+                            if (!field.Circle.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y)) continue;
+
+                            if (field.TakenBy != TakenBy.Computer) continue;
+
+                            gameLogic.TakeComputerBall(field.Id);
+                            gameLogic.PlayerCanTakeComputerBall = false;
+                            gameLogic.SwitchMoveOrder();
+                        }
+                    }
+                    else
+                    {
+                        gameLogic.SwitchMoveOrder();
+                    }
+                }
+                else
+                {
+                    //second stage - moving balls
                 }
             };
         }
 
         private void updateText()
         {
-            PlayerPoints.DisplayedString = "Points";
-            MoveNumber.DisplayedString = "8";
+            PlayerPoints.DisplayedString = $"Score: {gameLogic.PlayerPoints}-{gameLogic.ComputerPoints}";
+            MoveNumber.DisplayedString = $"Moves: {gameLogic.MoveNumber}";
 
             var minutes = stopwatch.ElapsedMilliseconds / 1000 / 60;
             var seconds = stopwatch.ElapsedMilliseconds / 1000 - (minutes * 60);
-            PlayTime.DisplayedString = $"{minutes} m. {seconds} s.";
+            PlayTime.DisplayedString = $"Playtime:\n{minutes} m. {seconds} s.";
 
-            WchichMove.DisplayedString = (gameLogic.IsPlayerMove) ? "Move: Your" : "move: Comp.";
+            WchichMove.DisplayedString = (gameLogic.IsPlayerMove) ? "Move:\nYour" : "Move:\nComputer";
 
-            ActionName.DisplayedString = "Action name";
+            ActionName.DisplayedString = $"Action:\n{gameLogic.ActionName}";
         }
     }
 }

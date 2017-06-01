@@ -15,9 +15,15 @@ namespace Morabara.Logic
         #region properties & constructor
 
         public bool IsPlayerMove { get; set; }
+        public bool IsFirstStage { get; private set; }
+        public string ActionName { get; set; }
+        public int PlayerPoints { get; private set; }
+        public int ComputerPoints { get; private set; }
+        public int MoveNumber { get; set; }
+        public bool PlayerCanTakeComputerBall;
+
         private List<Field> fields;
         private List<int[]> possibleThrees;
-        private bool IsFirstStage { get; set; }
         private bool IsPlayerStarting { get; }
         private int FirstStageRound { get; set; }
         private Random Random { get; }
@@ -28,6 +34,7 @@ namespace Morabara.Logic
             IsPlayerStarting = dialogResult != DialogResult.No;
             IsFirstStage = true;
             Random = new Random(DateTime.Now.Millisecond);
+            ActionName = "Placing ball";
 
             InitFieldList();
             InitPossibleThrees();
@@ -45,10 +52,12 @@ namespace Morabara.Logic
         {
             if (IsFirstStage)
             {
+                ActionName = "Placing ball";
                 PlaceComputerBall();
             }
             else
             {
+                ActionName = "Moving ball";
                 MoveComputerBall();
             }
         }
@@ -56,7 +65,7 @@ namespace Morabara.Logic
         public void PlaceComputerBall()
         {
             if (!GetIdsTakenBy(TakenBy.Nobody).Any()) return;
-       
+
             Task firstStage = new Task(() =>
             {
                 Thread.Sleep(1500);
@@ -69,7 +78,7 @@ namespace Morabara.Logic
                     AssignBallTo(Convert.ToInt32(idFieldToPlaceBall), TakenBy.Computer);
                     SwitchMoveOrder();
                     Debug.WriteLine("Making three in line.");
-                    TakeEnemyBall();
+                    TakePlayerBall();
                     return;
                 }
                 //check if player can make three and block it first found possibility
@@ -122,7 +131,7 @@ namespace Morabara.Logic
             firstStage.Start();
         }
 
-        public void TakeEnemyBall()
+        public void TakePlayerBall()
         {
             Task takeEnemyBall = new Task(() =>
             {
@@ -130,7 +139,7 @@ namespace Morabara.Logic
 
                 //when all player ball are in three computer can take one from any three
                 var playerBalls = fields.Where(f => f.TakenBy == TakenBy.Player).ToList();
-                if (playerBalls.All(b => b.BelongsToThree)) 
+                if (playerBalls.All(b => b.BelongsToThree))
                 {
                     RemoveAssignmentFromBall(playerBalls.FirstOrDefault(f => f.Id == (Random.Next(0, playerBalls.Count - 1))).Id);
                     Debug.WriteLine("All player ball making three so deleting random player ball.");
@@ -163,16 +172,22 @@ namespace Morabara.Logic
             takeEnemyBall.Wait();
         }
 
+        public void TakeComputerBall(int id)
+        {
+            RemoveAssignmentFromBall(id);
+        }
+
         public void MoveComputerBall()
         {
             Task secondStage = new Task(() =>
             {
+                
+
                 Thread.Sleep(1500);
                 Debug.WriteLine("Move computer ball.");
             });
 
             secondStage.Start();
-            //secondStage.Wait();
         }
 
         #region computer SI methods
@@ -327,7 +342,7 @@ namespace Morabara.Logic
             var playerFields = GetIdsTakenBy(TakenBy.Player);
             var nobodyFields = GetIdsTakenBy(TakenBy.Nobody);
 
-            var firstLineWhereOnlyPlayerHasTwoBalls =  possibleThrees
+            var firstLineWhereOnlyPlayerHasTwoBalls = possibleThrees
                 .Where(t => t.Intersect(playerFields).Count() == 2)
                 .FirstOrDefault(t2 => t2.Intersect(nobodyFields).Count() == 1);
 
@@ -340,13 +355,9 @@ namespace Morabara.Logic
             return nonInThreePlayerBall.ElementAt(Random.Next(0, nonInThreePlayerBall.Count - 1)).Id;
         }
 
-        #endregion
+        #endregion removing player ball
 
-        #region second stage
-
-        #endregion
-
-        #endregion computer SI
+        #endregion computer SI methods
 
         public IEnumerable<CircleShape> GetAllBalls()
         {
@@ -371,6 +382,7 @@ namespace Morabara.Logic
         public void CheckIfCreatedThree(int id, TakenBy takenBy)
         {
             var linesWhereFieldIdBelongs = possibleThrees.Where(t => t.Contains(id));
+            var handleactionOfMakedThree = false;
             foreach (var line in linesWhereFieldIdBelongs)
             {
                 if (!line.All(field => GetAssigment(field) == takenBy)) continue;
@@ -379,6 +391,23 @@ namespace Morabara.Logic
                     if (!line.Contains(field.Id)) continue;
 
                     field.BelongsToThree = true;
+
+                    if (!handleactionOfMakedThree)
+                    {
+                        if (takenBy == TakenBy.Player)
+                        {
+                            PlayerCanTakeComputerBall = true;
+                            ActionName = "Take ball";
+                            PlayerPoints++;
+                        }
+                        else if (takenBy == TakenBy.Computer)
+                        {
+                            ActionName = "Taking ball";
+                            ComputerPoints++;
+                        }
+
+                        handleactionOfMakedThree = true;
+                    }
                 }
             }
         }
@@ -387,8 +416,10 @@ namespace Morabara.Logic
         {
             fields.FirstOrDefault(f => f.Id == id).TakenBy = TakenBy.Nobody;
 
+            //if not belongs to three - end method
             if (!fields.FirstOrDefault(f => f.Id == id).BelongsToThree) return;
 
+            //but id, there is necessery to remove assigment to three for all three ball
             var threesWithThisElement = possibleThrees.Where(t1 => t1.Contains(id))
                 .Where(t2 => t2.All(e => GetAssigment(e) == TakenBy.Player));
 
@@ -425,6 +456,7 @@ namespace Morabara.Logic
             if (FirstStageRound == Setting.NumberOfPlayerBall)
             {
                 IsFirstStage = false;
+                ActionName = "Moving ball";
             }
             else
             {
