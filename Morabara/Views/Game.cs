@@ -128,6 +128,7 @@ namespace Morabara.Views
                 Window.Draw(ActionName);
 
                 Window.Display(); //display render up view
+                gameLogic.CheckIsEndOfGame();
             }
         }
 
@@ -143,6 +144,7 @@ namespace Morabara.Views
 
                 if (gameLogic.IsFirstStage && !gameLogic.PlayerCanTakeComputerBall)
                 {
+                    //first stage handling
                     foreach (var field in gameLogic.GetAllFields())
                     {
                         if (!field.Circle.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y)) continue;
@@ -160,8 +162,18 @@ namespace Morabara.Views
                 }
                 else if (!gameLogic.IsFirstStage && !gameLogic.PlayerCanTakeComputerBall)
                 {
-                    MessageBox.Show("Second stage - need to be implemented.");
-                    //second stage - moving balls
+                    //second stage handling
+                    foreach (var field in gameLogic.GetAllFields())
+                    {
+                        if (!field.Circle.GetGlobalBounds().Contains(Mouse.GetPosition(Window).X, Mouse.GetPosition(Window).Y)) continue;
+
+                        var ballHasBeenMoved = gameLogic.MoveOrSelectPlayerBall(field.Id);
+
+                        if (!gameLogic.PlayerCanTakeComputerBall && ballHasBeenMoved)
+                        {
+                            gameLogic.SwitchMoveOrder();
+                        }
+                    }
                 }
 
                 if (gameLogic.PlayerCanTakeComputerBall)

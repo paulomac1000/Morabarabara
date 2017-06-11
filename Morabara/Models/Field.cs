@@ -2,7 +2,6 @@
 using SFML.Graphics;
 using SFML.System;
 using System;
-using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace Morabara.Models
@@ -17,6 +16,7 @@ namespace Morabara.Models
 
             BelongsToThree = false;
             TakenBy = TakenBy.Nobody;
+            Selected = false;
         }
 
         public int Id { get; }
@@ -78,8 +78,30 @@ namespace Morabara.Models
 
         public bool BelongsToThree { get; set; }
 
-        public int PositionX { get; }
-        public int PositionY { get; }
+        public int PositionX { get; set; }
+        public int PositionY { get; set; }
+
+        private bool selected { get; set; }
+        public bool Selected
+        {
+            get
+            {
+                return selected;
+            }
+            set
+            {
+                if (value)
+                {
+                    Circle.OutlineThickness = 10;
+                    Circle.OutlineColor = new Color(250, 150, 100);
+                }
+                else
+                {
+                    Circle.OutlineThickness = 0;
+                }
+                selected = value;
+            }
+        }
 
         public CircleShape Circle { get; private set; }
     }

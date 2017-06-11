@@ -107,6 +107,7 @@
     <Compile Include="Logic\WindowsStack.cs" />
     <Compile Include="Models\Field.cs" />
     <Compile Include="Models\Enums\TakenBy.cs" />
+    <Compile Include="Models\Neighborhood.cs" />
     <Compile Include="Models\Setting.cs" />
     <Compile Include="Models\TopPlayer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
