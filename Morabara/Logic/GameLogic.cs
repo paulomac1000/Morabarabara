@@ -612,20 +612,21 @@ namespace Morabara.Logic
 
             foreach (var l in linesWhereComputerHasThree)
             {
-                var linesWhereAsNeighborIsNobodyField = l
+                var fieldsWhereAsNeighborIsNobodyField = l
                     .Where(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.Any(x => getAssigment(x) == TakenBy.Nobody));
 
-                if (!linesWhereAsNeighborIsNobodyField.Any()) continue;
+                if (!fieldsWhereAsNeighborIsNobodyField.Any()) continue;
 
-                var linesWhereAsNeighborIsNobodyFieldAndAreNotPlayerField = linesWhereAsNeighborIsNobodyField
+                var fieldsWhereAsNeighborIsNobodyFieldAndAreNotPlayerField = fieldsWhereAsNeighborIsNobodyField
                     .Where(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.All(x => getAssigment(x) != TakenBy.Player));
 
-                if (!linesWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.Any()) return null;
+                if (!fieldsWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.Any()) continue;
 
+                var idFrom = fieldsWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.FirstOrDefault(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.Any(n => getAssigment(n) == TakenBy.Computer));
                 return new MoveBallOrder
                 {
-                    IdFieldFrom = linesWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.FirstOrDefault(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.Any(n => getAssigment(n) == TakenBy.Computer)),
-                    IdFieldTo = linesWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.FirstOrDefault(f => getAssigment(f) == TakenBy.Nobody)
+                    IdFieldFrom = idFrom,
+                    IdFieldTo = neighborhoods.FirstOrDefault(n => n.Id == idFrom).Neighbors.FirstOrDefault(f => getAssigment(f) == TakenBy.Nobody)
                 };
             }
 
