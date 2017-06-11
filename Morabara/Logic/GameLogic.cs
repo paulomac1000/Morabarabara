@@ -375,6 +375,7 @@ namespace Morabara.Logic
                     MoveOrSelectComputerBall(moveBallOrder.IdFieldFrom);
                     Thread.Sleep(750);
                     MoveOrSelectComputerBall(moveBallOrder.IdFieldTo);
+                    checkIfDestroyedThree(moveBallOrder.IdFieldFrom, TakenBy.Computer);
                     return;
                 }
 
@@ -387,6 +388,7 @@ namespace Morabara.Logic
                     MoveOrSelectComputerBall(moveBallOrder.IdFieldFrom);
                     Thread.Sleep(750);
                     MoveOrSelectComputerBall(moveBallOrder.IdFieldTo);
+                    checkIfDestroyedThree(moveBallOrder.IdFieldFrom, TakenBy.Computer);
                     return;
                 }
 
@@ -399,6 +401,7 @@ namespace Morabara.Logic
                     MoveOrSelectComputerBall(moveBallOrder.IdFieldFrom);
                     Thread.Sleep(750);
                     MoveOrSelectComputerBall(moveBallOrder.IdFieldTo);
+                    checkIfDestroyedThree(moveBallOrder.IdFieldFrom, TakenBy.Computer);
                     return;
                 }
                 Debug.WriteLine("Can't make move, player won");
@@ -602,6 +605,30 @@ namespace Morabara.Logic
 
         private MoveBallOrder tryFindSafeWayToDestroyThree()
         {
+            var linesWhereComputerHasThree = possibleThrees
+               .Where(t => t.All(f => getAssigment(f) == TakenBy.Computer));
+
+            if (!linesWhereComputerHasThree.Any()) return null;
+
+            foreach (var l in linesWhereComputerHasThree)
+            {
+                var linesWhereAsNeighborIsNobodyField = l
+                    .Where(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.Any(x => getAssigment(x) == TakenBy.Nobody));
+
+                if (!linesWhereAsNeighborIsNobodyField.Any()) continue;
+
+                var linesWhereAsNeighborIsNobodyFieldAndAreNotPlayerField = linesWhereAsNeighborIsNobodyField
+                    .Where(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.All(x => getAssigment(x) != TakenBy.Player));
+
+                if (!linesWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.Any()) return null;
+
+                return new MoveBallOrder
+                {
+                    IdFieldFrom = linesWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.FirstOrDefault(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.Any(n => getAssigment(n) == TakenBy.Computer)),
+                    IdFieldTo = linesWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.FirstOrDefault(f => getAssigment(f) == TakenBy.Nobody)
+                };
+            }
+
             return null;
         }
 
