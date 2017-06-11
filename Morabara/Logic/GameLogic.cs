@@ -26,22 +26,24 @@ namespace Morabara.Logic
         private List<Field> fields;
         private List<int[]> possibleThrees;
         private List<Neighborhood> neighborhoods;
-        private bool IsPlayerStarting { get; }
-        private int FirstStageRound { get; set; }
-        private Random Random { get; }
+        private bool isPlayerStarting { get; }
+        private int firstStageRound { get; set; }
+        private Random random { get; }
+        private bool computerCanMakeMove { get; set; } = true;
+        private bool playerCanMakeMove { get; set; } = true;
 
         public GameLogic()
         {
             var dialogResult = MessageBox.Show("Do You want to start?", "Who has to start", MessageBoxButtons.YesNo);
-            IsPlayerStarting = dialogResult != DialogResult.No;
+            isPlayerStarting = dialogResult != DialogResult.No;
             IsFirstStage = true;
-            Random = new Random(DateTime.Now.Millisecond);
+            random = new Random(DateTime.Now.Millisecond);
             ActionName = "Placing ball";
 
             initFieldList();
             initPossibleThrees();
             initNeighbors();
-            IsPlayerMove = IsPlayerStarting;
+            IsPlayerMove = isPlayerStarting;
 
             if (!IsPlayerMove)
             {
@@ -267,7 +269,7 @@ namespace Morabara.Logic
                 var playerBalls = fields.Where(f => f.TakenBy == TakenBy.Player).ToList();
                 if (playerBalls.All(b => b.BelongsToThree))
                 {
-                    removeAssignmentFromBall(playerBalls.FirstOrDefault(f => f.Id == (Random.Next(0, playerBalls.Count - 1))).Id);
+                    removeAssignmentFromBall(playerBalls.ElementAt(random.Next(0, playerBalls.Count - 1)).Id);
                     Debug.WriteLine("All player ball making three so deleting random player ball.");
                     return;
                 }
@@ -337,7 +339,7 @@ namespace Morabara.Logic
         public int GetIdOfRandomPlayerBall()
         {
             var nonInThreePlayerBall = fields.Where(f => f.TakenBy == TakenBy.Player).Where(b => b.BelongsToThree == false).ToList();
-            return nonInThreePlayerBall.ElementAt(Random.Next(0, nonInThreePlayerBall.Count - 1)).Id;
+            return nonInThreePlayerBall.ElementAt(random.Next(0, nonInThreePlayerBall.Count - 1)).Id;
         }
 
         #endregion removing player ball
@@ -348,16 +350,58 @@ namespace Morabara.Logic
         {
             Task secondStage = new Task(() =>
             {
-                //scenario 1 - move to create three, then TakePlayerBall();
-                //scenario 2 - move to destroy three in way to not allow block by player
-                //scenario 3 - move to destroy three
-                //scenario 4 - move random
+                Thread.Sleep(1500);
+                MoveBallOrder moveBallOrder = null;
 
-                Thread.Sleep(750);
-                MoveOrSelectComputerBall(fields.FirstOrDefault(f => f.TakenBy == TakenBy.Computer).Id);
+                //check if can move to create three
+                moveBallOrder = checkIfCanMoveToCreateThree();
+                if(moveBallOrder!= null)
+                {
+                    Debug.WriteLine("Moving ball to create three in line");
+                    Thread.Sleep(750);
+                    MoveOrSelectComputerBall(moveBallOrder.IdFieldFrom);
+                    Thread.Sleep(750);
+                    MoveOrSelectComputerBall(moveBallOrder.IdFieldTo);
+                    TakePlayerBall();
+                    return;
+                }
 
-                Thread.Sleep(750);
-                MoveOrSelectComputerBall(fields.FirstOrDefault(f => f.TakenBy == TakenBy.Nobody).Id);
+                //check if can block create three by player
+                moveBallOrder = checkIfCanBlockCreateThreeByBlayer();
+                if (moveBallOrder != null)
+                {
+                    Debug.WriteLine("Moving ball to prevent three in line by player");
+                    Thread.Sleep(750);
+                    MoveOrSelectComputerBall(moveBallOrder.IdFieldFrom);
+                    Thread.Sleep(750);
+                    MoveOrSelectComputerBall(moveBallOrder.IdFieldTo);
+                    return;
+                }
+
+                //try find safe way to destroy three
+                moveBallOrder = tryFindSafeWayToDestroyThree();
+                if (moveBallOrder != null)
+                {
+                    Debug.WriteLine("Moving ball safe destroy own three to make it again in next move");
+                    Thread.Sleep(750);
+                    MoveOrSelectComputerBall(moveBallOrder.IdFieldFrom);
+                    Thread.Sleep(750);
+                    MoveOrSelectComputerBall(moveBallOrder.IdFieldTo);
+                    return;
+                }
+
+                //random move
+                moveBallOrder = randomMove();
+                if (moveBallOrder != null)
+                {
+                    Debug.WriteLine("Make random move");
+                    Thread.Sleep(750);
+                    MoveOrSelectComputerBall(moveBallOrder.IdFieldFrom);
+                    Thread.Sleep(750);
+                    MoveOrSelectComputerBall(moveBallOrder.IdFieldTo);
+                    return;
+                }
+                Debug.WriteLine("Can't make move, player won");
             });
 
             secondStage.Start();
@@ -405,16 +449,28 @@ namespace Morabara.Logic
         {
             if (!IsFirstStage)
             {
-                if (fields.Where(f => f.TakenBy == TakenBy.Computer).Count() == 2)
+                if(!computerCanMakeMove)
                 {
                     Thread.Sleep(500);
-                    MessageBox.Show("You won!");
+                    MessageBox.Show("Computer can't make move! You won!");
+                    WindowsStack.CloseLastWindow();
+                }
+                else if(!playerCanMakeMove)
+                {
+                    Thread.Sleep(500);
+                    MessageBox.Show("You can't make move! You lost!");
+                    WindowsStack.CloseLastWindow();
+                }
+                else if (fields.Where(f => f.TakenBy == TakenBy.Computer).Count() == 2)
+                {
+                    Thread.Sleep(500);
+                    MessageBox.Show("Computer can't create three any more! You won!");
                     WindowsStack.CloseLastWindow();
                 }
                 else if (fields.Where(f => f.TakenBy == TakenBy.Player).Count() == 2)
                 {
                     Thread.Sleep(500);
-                    MessageBox.Show("You lost!");
+                    MessageBox.Show("You can't create three any more! You lost!");
                     WindowsStack.CloseLastWindow();
                 }
             }
@@ -479,6 +535,102 @@ namespace Morabara.Logic
             }
         }
 
+        private MoveBallOrder checkIfCanMoveToCreateThree()
+        {
+            var computerFieldsIds = fields.Where(cf => cf.TakenBy == TakenBy.Computer).Select(i => i.Id).ToList();
+
+            //get all lines where missing one ball to create three in line
+            var linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned = new List<int[]>();
+
+            foreach (var line in possibleThrees)
+            {
+                if (line.Where(l => getAssigment(l) == TakenBy.Computer).Count() == 2 &&
+                    line.Where(l => getAssigment(l) == TakenBy.Nobody).Count() == 1)
+                {
+                    linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned.Add(line);
+                }
+            }
+            if (!linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned.Any()) return null;
+
+            //check for wchich line where is empty field neighbour is field taken by computer
+            foreach (var line in linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned)
+            {
+                var idOfFieldTakenByNobody = line.FirstOrDefault(l => getAssigment(l) == TakenBy.Nobody);
+
+                var neighbours = neighborhoods.FirstOrDefault(n => n.Id == idOfFieldTakenByNobody).Neighbors;
+
+                int idFieldFromBallShouldBeMoved = neighbours.FirstOrDefault(n => getAssigment(n) == TakenBy.Computer && !line.Any(l => l == n));
+
+                if (idFieldFromBallShouldBeMoved == 0) continue;
+
+                return new MoveBallOrder
+                {
+                    IdFieldFrom = Convert.ToInt32(idFieldFromBallShouldBeMoved),
+                    IdFieldTo = idOfFieldTakenByNobody
+                };
+            }
+            
+            //else return null
+            return null;
+        }
+
+        private MoveBallOrder checkIfCanBlockCreateThreeByBlayer()
+        {
+            var linesWhereTwoPlayerFieldsAndOneNobody = possibleThrees
+                .Where(t => t.Where(f => getAssigment(f) == TakenBy.Player).Count() == 2)
+                .Where(t => t.Where(f => getAssigment(f) == TakenBy.Nobody).Count() == 1);
+
+            if (!linesWhereTwoPlayerFieldsAndOneNobody.Any()) return null;
+
+            foreach(var l in linesWhereTwoPlayerFieldsAndOneNobody)
+            {
+                var nobodyFieldInLine = l.FirstOrDefault(f => getAssigment(f) == TakenBy.Nobody);
+                var neighbors = neighborhoods.FirstOrDefault(n => n.Id == nobodyFieldInLine).Neighbors;
+
+                if (!neighbors.Any(n => getAssigment(n) == TakenBy.Player)) continue;
+                if (!neighbors.Any(n => getAssigment(n) == TakenBy.Computer)) continue;
+
+                return new MoveBallOrder
+                {
+                    IdFieldFrom = neighbors.FirstOrDefault(f => getAssigment(f) == TakenBy.Computer),
+                    IdFieldTo = nobodyFieldInLine
+                };
+            }
+
+            return null;
+        }
+
+        private MoveBallOrder tryFindSafeWayToDestroyThree()
+        {
+            return null;
+        }
+
+        private MoveBallOrder randomMove()
+        {
+            var computerFieldsWithOneNotTakenNeighbor = fields
+                .Where(f => f.TakenBy == TakenBy.Computer)
+                .Where(fc => neighborhoods.FirstOrDefault(n => n.Id == fc.Id).Neighbors.Any(fn => getAssigment(fn) == TakenBy.Nobody));
+
+            if (!computerFieldsWithOneNotTakenNeighbor.Any())
+            {
+                computerCanMakeMove = false;
+                return null;
+            }
+
+            var randomField = computerFieldsWithOneNotTakenNeighbor.ElementAt(random.Next(0, computerFieldsWithOneNotTakenNeighbor.Count() - 1));
+            var allUntakenNeighbor = neighborhoods
+                .FirstOrDefault(n => n.Id == randomField.Id)
+                .Neighbors.Where(nt => getAssigment(nt) == TakenBy.Nobody);
+            var randomUntakenNeighbor = allUntakenNeighbor
+                .ElementAt(random.Next(0, allUntakenNeighbor.Count() - 1));
+
+            return new MoveBallOrder
+            {
+                IdFieldFrom = randomField.Id,
+                IdFieldTo = randomUntakenNeighbor
+            };
+        }
+        
         public void MoveOrSelectComputerBall(int id)
         {
             var searched = getSelectedBallOrNull();
@@ -605,20 +757,20 @@ namespace Morabara.Logic
 
         private void checkAndIncrementRound(TakenBy takenBy)
         {
-            if (FirstStageRound == Setting.NumberOfPlayerBall)
+            if (firstStageRound == Setting.NumberOfPlayerBall)
             {
                 IsFirstStage = false;
                 ActionName = "Moving ball";
             }
             else
             {
-                if (IsPlayerStarting && takenBy == TakenBy.Player)
+                if (isPlayerStarting && takenBy == TakenBy.Player)
                 {
-                    FirstStageRound++;
+                    firstStageRound++;
                 }
-                else if (!IsPlayerStarting && takenBy == TakenBy.Computer)
+                else if (!isPlayerStarting && takenBy == TakenBy.Computer)
                 {
-                    FirstStageRound++;
+                    firstStageRound++;
                 }
             }
         }
@@ -635,7 +787,7 @@ namespace Morabara.Logic
 
                 new Neighborhood(4, new List<int>{ 1,5,7,11 }),
                 new Neighborhood(5, new List<int>{ 2,4,6,8 }),
-                new Neighborhood(6, new List<int>{ 3,5,9,15 }),
+                new Neighborhood(6, new List<int>{ 3,5,9,14 }),
 
                 new Neighborhood(7, new List<int>{ 4,8,12 }),
                 new Neighborhood(8, new List<int>{ 5,7,9 }),
