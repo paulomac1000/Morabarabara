@@ -410,6 +410,127 @@ namespace Morabara.Logic
             secondStage.Start();
         }
 
+        private MoveBallOrder checkIfCanMoveToCreateThree()
+        {
+            var computerFieldsIds = fields.Where(cf => cf.TakenBy == TakenBy.Computer).Select(i => i.Id).ToList();
+
+            //get all lines where missing one ball to create three in line
+            var linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned = new List<int[]>();
+
+            foreach (var line in possibleThrees)
+            {
+                if (line.Where(l => getAssigment(l) == TakenBy.Computer).Count() == 2 &&
+                    line.Where(l => getAssigment(l) == TakenBy.Nobody).Count() == 1)
+                {
+                    linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned.Add(line);
+                }
+            }
+            if (!linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned.Any()) return null;
+
+            //check for wchich line where is empty field neighbour is field taken by computer
+            foreach (var line in linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned)
+            {
+                var idOfFieldTakenByNobody = line.FirstOrDefault(l => getAssigment(l) == TakenBy.Nobody);
+
+                var neighbours = neighborhoods.FirstOrDefault(n => n.Id == idOfFieldTakenByNobody).Neighbors;
+
+                int idFieldFromBallShouldBeMoved = neighbours.FirstOrDefault(n => getAssigment(n) == TakenBy.Computer && !line.Any(l => l == n));
+
+                if (idFieldFromBallShouldBeMoved == 0) continue;
+
+                return new MoveBallOrder
+                {
+                    IdFieldFrom = Convert.ToInt32(idFieldFromBallShouldBeMoved),
+                    IdFieldTo = idOfFieldTakenByNobody
+                };
+            }
+
+            //else return null
+            return null;
+        }
+
+        private MoveBallOrder checkIfCanBlockCreateThreeByBlayer()
+        {
+            var linesWhereTwoPlayerFieldsAndOneNobody = possibleThrees
+                .Where(t => t.Where(f => getAssigment(f) == TakenBy.Player).Count() == 2)
+                .Where(t => t.Where(f => getAssigment(f) == TakenBy.Nobody).Count() == 1);
+
+            if (!linesWhereTwoPlayerFieldsAndOneNobody.Any()) return null;
+
+            foreach (var l in linesWhereTwoPlayerFieldsAndOneNobody)
+            {
+                var nobodyFieldInLine = l.FirstOrDefault(f => getAssigment(f) == TakenBy.Nobody);
+                var neighbors = neighborhoods.FirstOrDefault(n => n.Id == nobodyFieldInLine).Neighbors;
+
+                if (!neighbors.Any(n => getAssigment(n) == TakenBy.Player)) continue;
+                if (!neighbors.Any(n => getAssigment(n) == TakenBy.Computer)) continue;
+
+                return new MoveBallOrder
+                {
+                    IdFieldFrom = neighbors.FirstOrDefault(f => getAssigment(f) == TakenBy.Computer),
+                    IdFieldTo = nobodyFieldInLine
+                };
+            }
+
+            return null;
+        }
+
+        private MoveBallOrder tryFindSafeWayToDestroyThree()
+        {
+            var linesWhereComputerHasThree = possibleThrees
+               .Where(t => t.All(f => getAssigment(f) == TakenBy.Computer));
+
+            if (!linesWhereComputerHasThree.Any()) return null;
+
+            foreach (var l in linesWhereComputerHasThree)
+            {
+                var fieldsWhereAsNeighborIsNobodyField = l
+                    .Where(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.Any(x => getAssigment(x) == TakenBy.Nobody));
+
+                if (!fieldsWhereAsNeighborIsNobodyField.Any()) continue;
+
+                var fieldsWhereAsNeighborIsNobodyFieldAndAreNotPlayerField = fieldsWhereAsNeighborIsNobodyField
+                    .Where(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.All(x => getAssigment(x) != TakenBy.Player));
+
+                if (!fieldsWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.Any()) continue;
+
+                var idFrom = fieldsWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.FirstOrDefault(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.Any(n => getAssigment(n) == TakenBy.Computer));
+                return new MoveBallOrder
+                {
+                    IdFieldFrom = idFrom,
+                    IdFieldTo = neighborhoods.FirstOrDefault(n => n.Id == idFrom).Neighbors.FirstOrDefault(f => getAssigment(f) == TakenBy.Nobody)
+                };
+            }
+
+            return null;
+        }
+
+        private MoveBallOrder randomMove()
+        {
+            var computerFieldsWithOneNotTakenNeighbor = fields
+                .Where(f => f.TakenBy == TakenBy.Computer)
+                .Where(fc => neighborhoods.FirstOrDefault(n => n.Id == fc.Id).Neighbors.Any(fn => getAssigment(fn) == TakenBy.Nobody));
+
+            if (!computerFieldsWithOneNotTakenNeighbor.Any())
+            {
+                computerCanMakeMove = false;
+                return null;
+            }
+
+            var randomField = computerFieldsWithOneNotTakenNeighbor.ElementAt(random.Next(0, computerFieldsWithOneNotTakenNeighbor.Count() - 1));
+            var allUntakenNeighbor = neighborhoods
+                .FirstOrDefault(n => n.Id == randomField.Id)
+                .Neighbors.Where(nt => getAssigment(nt) == TakenBy.Nobody);
+            var randomUntakenNeighbor = allUntakenNeighbor
+                .ElementAt(random.Next(0, allUntakenNeighbor.Count() - 1));
+
+            return new MoveBallOrder
+            {
+                IdFieldFrom = randomField.Id,
+                IdFieldTo = randomUntakenNeighbor
+            };
+        }
+
         #endregion second stage
 
         #endregion computer SI methods
@@ -536,130 +657,9 @@ namespace Morabara.Logic
                     }
                 }
             }
-        }
-
-        private MoveBallOrder checkIfCanMoveToCreateThree()
-        {
-            var computerFieldsIds = fields.Where(cf => cf.TakenBy == TakenBy.Computer).Select(i => i.Id).ToList();
-
-            //get all lines where missing one ball to create three in line
-            var linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned = new List<int[]>();
-
-            foreach (var line in possibleThrees)
-            {
-                if (line.Where(l => getAssigment(l) == TakenBy.Computer).Count() == 2 &&
-                    line.Where(l => getAssigment(l) == TakenBy.Nobody).Count() == 1)
-                {
-                    linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned.Add(line);
-                }
-            }
-            if (!linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned.Any()) return null;
-
-            //check for wchich line where is empty field neighbour is field taken by computer
-            foreach (var line in linesWhereComputerHasTwoBallsAndThreeFieldIsUnassigned)
-            {
-                var idOfFieldTakenByNobody = line.FirstOrDefault(l => getAssigment(l) == TakenBy.Nobody);
-
-                var neighbours = neighborhoods.FirstOrDefault(n => n.Id == idOfFieldTakenByNobody).Neighbors;
-
-                int idFieldFromBallShouldBeMoved = neighbours.FirstOrDefault(n => getAssigment(n) == TakenBy.Computer && !line.Any(l => l == n));
-
-                if (idFieldFromBallShouldBeMoved == 0) continue;
-
-                return new MoveBallOrder
-                {
-                    IdFieldFrom = Convert.ToInt32(idFieldFromBallShouldBeMoved),
-                    IdFieldTo = idOfFieldTakenByNobody
-                };
-            }
-            
-            //else return null
-            return null;
-        }
-
-        private MoveBallOrder checkIfCanBlockCreateThreeByBlayer()
-        {
-            var linesWhereTwoPlayerFieldsAndOneNobody = possibleThrees
-                .Where(t => t.Where(f => getAssigment(f) == TakenBy.Player).Count() == 2)
-                .Where(t => t.Where(f => getAssigment(f) == TakenBy.Nobody).Count() == 1);
-
-            if (!linesWhereTwoPlayerFieldsAndOneNobody.Any()) return null;
-
-            foreach(var l in linesWhereTwoPlayerFieldsAndOneNobody)
-            {
-                var nobodyFieldInLine = l.FirstOrDefault(f => getAssigment(f) == TakenBy.Nobody);
-                var neighbors = neighborhoods.FirstOrDefault(n => n.Id == nobodyFieldInLine).Neighbors;
-
-                if (!neighbors.Any(n => getAssigment(n) == TakenBy.Player)) continue;
-                if (!neighbors.Any(n => getAssigment(n) == TakenBy.Computer)) continue;
-
-                return new MoveBallOrder
-                {
-                    IdFieldFrom = neighbors.FirstOrDefault(f => getAssigment(f) == TakenBy.Computer),
-                    IdFieldTo = nobodyFieldInLine
-                };
-            }
-
-            return null;
-        }
-
-        private MoveBallOrder tryFindSafeWayToDestroyThree()
-        {
-            var linesWhereComputerHasThree = possibleThrees
-               .Where(t => t.All(f => getAssigment(f) == TakenBy.Computer));
-
-            if (!linesWhereComputerHasThree.Any()) return null;
-
-            foreach (var l in linesWhereComputerHasThree)
-            {
-                var fieldsWhereAsNeighborIsNobodyField = l
-                    .Where(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.Any(x => getAssigment(x) == TakenBy.Nobody));
-
-                if (!fieldsWhereAsNeighborIsNobodyField.Any()) continue;
-
-                var fieldsWhereAsNeighborIsNobodyFieldAndAreNotPlayerField = fieldsWhereAsNeighborIsNobodyField
-                    .Where(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.All(x => getAssigment(x) != TakenBy.Player));
-
-                if (!fieldsWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.Any()) continue;
-
-                var idFrom = fieldsWhereAsNeighborIsNobodyFieldAndAreNotPlayerField.FirstOrDefault(f => neighborhoods.FirstOrDefault(n => n.Id == f).Neighbors.Any(n => getAssigment(n) == TakenBy.Computer));
-                return new MoveBallOrder
-                {
-                    IdFieldFrom = idFrom,
-                    IdFieldTo = neighborhoods.FirstOrDefault(n => n.Id == idFrom).Neighbors.FirstOrDefault(f => getAssigment(f) == TakenBy.Nobody)
-                };
-            }
-
-            return null;
-        }
-
-        private MoveBallOrder randomMove()
-        {
-            var computerFieldsWithOneNotTakenNeighbor = fields
-                .Where(f => f.TakenBy == TakenBy.Computer)
-                .Where(fc => neighborhoods.FirstOrDefault(n => n.Id == fc.Id).Neighbors.Any(fn => getAssigment(fn) == TakenBy.Nobody));
-
-            if (!computerFieldsWithOneNotTakenNeighbor.Any())
-            {
-                computerCanMakeMove = false;
-                return null;
-            }
-
-            var randomField = computerFieldsWithOneNotTakenNeighbor.ElementAt(random.Next(0, computerFieldsWithOneNotTakenNeighbor.Count() - 1));
-            var allUntakenNeighbor = neighborhoods
-                .FirstOrDefault(n => n.Id == randomField.Id)
-                .Neighbors.Where(nt => getAssigment(nt) == TakenBy.Nobody);
-            var randomUntakenNeighbor = allUntakenNeighbor
-                .ElementAt(random.Next(0, allUntakenNeighbor.Count() - 1));
-
-            return new MoveBallOrder
-            {
-                IdFieldFrom = randomField.Id,
-                IdFieldTo = randomUntakenNeighbor
-            };
-        }
+        }        
         
-        public void MoveOrSelectComputerBall(int id)
+        private void MoveOrSelectComputerBall(int id)
         {
             var searched = getSelectedBallOrNull();
             if (getSelectedBallOrNull() == null)
